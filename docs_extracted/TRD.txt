@@ -1,0 +1,333 @@
+Technical Requirements Document (TRD)
+Project
+Competitive Programming & DSA Platform
+1. System Architecture
+The application follows a client-server architecture.
+Frontend communicates with backend through REST APIs and WebSockets.
+┌─────────────┐
+│   React UI  │
+└──────┬──────┘
+│
+REST APIs / WebSockets
+│
+┌──────▼──────┐
+│   FastAPI   │
+└──────┬──────┘
+│
+┌─────┼──────────┐
+│     │          │
+▼     ▼          ▼
+Postgres Redis  Docker
+2. Technology Stack
+Frontend
+React
+React Router
+Axios
+Tailwind CSS
+Monaco Editor
+Recharts
+Backend
+FastAPI
+Python
+Pydantic
+SQLAlchemy
+Alembic
+Database
+PostgreSQL
+Real-Time Communication
+WebSockets
+Caching
+Redis
+Code Execution
+Docker
+Authentication
+JWT
+Passlib/Bcrypt
+Deployment
+Docker
+Nginx
+Linux Server
+Vercel
+3. Backend Folder Structure
+backend/
+├── app/
+│
+├── api/
+│   ├── auth/
+│   ├── users/
+│   ├── problems/
+│   ├── submissions/
+│   ├── battles/
+│
+├── models/
+│
+├── schemas/
+│
+├── services/
+│
+├── core/
+│
+├── db/
+│
+├── websocket/
+│
+├── utils/
+│
+└── main.py
+4. Database Design
+Users Table
+users
+Fields:
+id
+username
+email
+password_hash
+bio
+profile_picture
+created_at
+Problems Table
+problems
+Fields:
+id
+title
+slug
+description
+difficulty
+constraints
+examples
+created_at
+Problem Tags Table
+problem_tags
+Fields:
+id
+name
+Examples:
+Arrays
+Graphs
+Trees
+DP
+Greedy
+Submissions Table
+submissions
+Fields:
+id
+user_id
+problem_id
+language
+code
+verdict
+execution_time
+memory_used
+submitted_at
+Friendships Table
+friendships
+Fields:
+id
+sender_id
+receiver_id
+status
+Status:
+pending
+accepted
+rejected
+Battles Table
+battles
+Fields:
+id
+host_user_id
+opponent_user_id
+problem_id
+status
+winner_id
+start_time
+end_time
+Battle Submissions Table
+battle_submissions
+Fields:
+id
+battle_id
+user_id
+verdict
+submitted_at
+5. Authentication System
+Registration Flow
+User submits registration form
+Password hashed using bcrypt
+User stored in database
+Success response returned
+Login Flow
+User enters credentials
+Password verified
+JWT access token generated
+Token returned
+Protected Routes
+Require:
+Authorization: Bearer TOKEN
+Examples:
+Profile
+Submission history
+Friend requests
+Battles
+6. API Design
+Auth APIs
+Register
+POST /api/auth/register
+Login
+POST /api/auth/login
+Current User
+GET /api/auth/me
+Problem APIs
+Get Problems
+GET /api/problems
+Supports:
+difficulty
+tag
+search
+Get Single Problem
+GET /api/problems/{id}
+Submission APIs
+Submit Solution
+POST /api/submissions
+Payload:
+{
+"problem_id": 1,
+"language": "cpp",
+"code": "..."
+}
+Get Submission History
+GET /api/submissions/history
+Friend APIs
+Send Request
+POST /api/friends/request
+Accept Request
+POST /api/friends/accept
+Get Friends
+GET /api/friends
+Battle APIs
+Create Battle
+POST /api/battles
+Join Battle
+POST /api/battles/{id}/join
+Battle Details
+GET /api/battles/{id}
+7. WebSocket Requirements
+Purpose:
+Live battles
+Live leaderboard
+Battle timer
+Instant submission updates
+Endpoint:
+/ws/battle/{battle_id}
+Events:
+battle_started
+submission_received
+leaderboard_updated
+battle_finished
+8. Redis Requirements
+Used For:
+Caching
+Problem lists
+User statistics
+Dashboard data
+Real-Time Features
+Active battles
+Leaderboards
+Rate Limiting
+Login attempts
+Submission frequency
+9. Online IDE Requirements
+Editor:
+Monaco Editor
+Features:
+Syntax Highlighting
+Auto Indentation
+Line Numbers
+Multiple Languages
+Supported Languages:
+C++
+Python
+Java
+10. Code Execution System
+Phase 1:
+Store submissions only.
+Phase 2:
+Execute code inside Docker containers.
+Flow:
+User Submission
+↓
+Docker Container
+↓
+Compile Code
+↓
+Run Test Cases
+↓
+Generate Verdict
+↓
+Store Result
+Verdicts:
+Accepted
+Wrong Answer
+Runtime Error
+Time Limit Exceeded
+11. Frontend Pages
+Authentication
+Login
+Register
+Problems
+Problem List
+Problem Details
+User
+Profile
+Dashboard
+Battles
+Create Battle
+Join Battle
+Live Battle
+Analytics
+Rating Graphs
+Progress Dashboard
+12. Security Requirements
+Password hashing with bcrypt
+JWT authentication
+Input validation
+SQL injection prevention
+Rate limiting
+Protected WebSocket connections
+13. Performance Requirements
+API Response Time:
+< 500ms
+Problem List:
+< 1 second
+Dashboard:
+< 2 seconds
+Battle Updates:
+< 200ms latency
+14. Deployment Requirements
+Frontend
+Vercel
+Backend
+Dockerized FastAPI
+Database
+PostgreSQL
+Reverse Proxy
+Nginx
+Environment Variables
+DATABASE_URL=
+JWT_SECRET=
+REDIS_URL=
+CODEFORCES_API_URL=
+15. MVP Deliverables
+Must Be Completed:
+✓ Authentication
+✓ Problem Management
+✓ User Profiles
+✓ Submission System
+✓ Dashboard
+✓ Codeforces Integration
+✓ Friend System
+✓ Real-Time Battles
+Optional:
+Contest Creation
+AI Features
+Mobile App
+Team Competitions

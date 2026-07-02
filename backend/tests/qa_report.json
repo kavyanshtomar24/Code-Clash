@@ -1,0 +1,712 @@
+{
+  "summary": {
+    "passed": 63,
+    "failed": 2,
+    "total": 65,
+    "score": 9.7
+  },
+  "critical_bugs": [
+    "POST /friends/request: Send request \u2014 CRITICAL: ResponseValidationError \u2014 FriendRequest ORM returned without enriched fields"
+  ],
+  "security_issues": [],
+  "perf_issues": [
+    "POST http://localhost:8000/api/v1/codeforces/link: 1630ms (>500ms SLA)",
+    "POST http://localhost:8000/api/v1/codeforces/sync: 912ms (>500ms SLA)"
+  ],
+  "results": [
+    {
+      "module": "health",
+      "method": "GET",
+      "path": "/",
+      "test_case": "Health check",
+      "expected": "200 healthy",
+      "actual": "200 {'status': 'healthy', 'version': '1.0.0', 'service': 'codeclash-api'}",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "health",
+      "method": "GET",
+      "path": "/openapi.json",
+      "test_case": "OpenAPI schema",
+      "expected": ">=40 paths",
+      "actual": "49 paths",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/register",
+      "test_case": "Valid registration",
+      "expected": "201 + schema",
+      "actual": "201 id=65862913",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/register",
+      "test_case": "Duplicate username",
+      "expected": "409",
+      "actual": "409",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/register",
+      "test_case": "Short password validation",
+      "expected": "422",
+      "actual": "422",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/register",
+      "test_case": "Second user registration",
+      "expected": "201",
+      "actual": "201",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/login",
+      "test_case": "Valid login",
+      "expected": "200 + tokens",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/login",
+      "test_case": "Invalid password",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/login",
+      "test_case": "User B login",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "GET",
+      "path": "/auth/me",
+      "test_case": "Authenticated /me",
+      "expected": "200 correct user",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "GET",
+      "path": "/auth/me",
+      "test_case": "No token",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "GET",
+      "path": "/auth/me",
+      "test_case": "Invalid token",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "GET",
+      "path": "/auth/me",
+      "test_case": "Tampered JWT",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/refresh",
+      "test_case": "Token refresh",
+      "expected": "200 + new tokens",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/logout",
+      "test_case": "Logout",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "auth",
+      "method": "POST",
+      "path": "/auth/login",
+      "test_case": "Admin login",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "problems",
+      "method": "GET",
+      "path": "/problems/",
+      "test_case": "List problems",
+      "expected": "200 + items",
+      "actual": "200 count=13",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "problems",
+      "method": "GET",
+      "path": "/problems/?difficulty=easy",
+      "test_case": "Filter difficulty",
+      "expected": "all easy",
+      "actual": "PASS",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "problems",
+      "method": "GET",
+      "path": "/problems/?tag=Arrays",
+      "test_case": "Filter tag",
+      "expected": "200",
+      "actual": "200 count=6",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "problems",
+      "method": "GET",
+      "path": "/problems/?search=Two",
+      "test_case": "Search",
+      "expected": "match found",
+      "actual": "PASS",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "problems",
+      "method": "GET",
+      "path": "/problems/{slug}",
+      "test_case": "Problem detail",
+      "expected": "200 + description",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "problems",
+      "method": "GET",
+      "path": "/problems/{slug}",
+      "test_case": "Invalid slug",
+      "expected": "404",
+      "actual": "404",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "problems",
+      "method": "GET",
+      "path": "/problems/tags",
+      "test_case": "List tags",
+      "expected": "200 + tags",
+      "actual": "200 count=14",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "problems",
+      "method": "POST",
+      "path": "/problems/",
+      "test_case": "Non-admin create blocked",
+      "expected": "403",
+      "actual": "403",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "problems",
+      "method": "POST",
+      "path": "/problems/",
+      "test_case": "Admin create problem",
+      "expected": "201",
+      "actual": "201",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "users",
+      "method": "GET",
+      "path": "/users/profile/{username}",
+      "test_case": "Public profile",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "users",
+      "method": "GET",
+      "path": "/users/profile/{username}",
+      "test_case": "Invalid username",
+      "expected": "404",
+      "actual": "404",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "users",
+      "method": "PUT",
+      "path": "/users/profile",
+      "test_case": "Update profile",
+      "expected": "200 + bio updated",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "users",
+      "method": "GET",
+      "path": "/users/stats",
+      "test_case": "Own stats",
+      "expected": "200 + stats",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "users",
+      "method": "GET",
+      "path": "/users/search?q=qa_user",
+      "test_case": "Search users",
+      "expected": "200",
+      "actual": "200 count=2",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "users",
+      "method": "GET",
+      "path": "/users/stats",
+      "test_case": "No auth",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "submissions",
+      "method": "POST",
+      "path": "/submissions/",
+      "test_case": "Submit code",
+      "expected": "201 + schema",
+      "actual": "201 verdict=PENDING",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "submissions",
+      "method": "GET",
+      "path": "/submissions/{id}",
+      "test_case": "Poll verdict",
+      "expected": "200",
+      "actual": "200 verdict=AC",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "submissions",
+      "method": "POST",
+      "path": "/submissions/",
+      "test_case": "Missing fields",
+      "expected": "422",
+      "actual": "422",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "submissions",
+      "method": "POST",
+      "path": "/submissions/",
+      "test_case": "Invalid language",
+      "expected": "accepted or rejected",
+      "actual": "201",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "submissions",
+      "method": "POST",
+      "path": "/submissions/run",
+      "test_case": "Run on sample input",
+      "expected": "200 + stdout",
+      "actual": "200 stdout=",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "submissions",
+      "method": "GET",
+      "path": "/submissions/history",
+      "test_case": "History",
+      "expected": "200 + list",
+      "actual": "200 total=2",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "submissions",
+      "method": "GET",
+      "path": "/submissions/history",
+      "test_case": "No auth",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "friends",
+      "method": "POST",
+      "path": "/friends/request",
+      "test_case": "Send request",
+      "expected": "201",
+      "actual": "500",
+      "status": "FAIL",
+      "notes": "CRITICAL: ResponseValidationError \u2014 FriendRequest ORM returned without enriched fields"
+    },
+    {
+      "module": "friends",
+      "method": "POST",
+      "path": "/friends/request",
+      "test_case": "Duplicate request",
+      "expected": "409",
+      "actual": "409",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "friends",
+      "method": "POST",
+      "path": "/friends/request",
+      "test_case": "Self request blocked",
+      "expected": "400",
+      "actual": "400",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "friends",
+      "method": "GET",
+      "path": "/friends/requests",
+      "test_case": "List pending",
+      "expected": "200",
+      "actual": "200 count=1",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "friends",
+      "method": "POST",
+      "path": "/friends/accept/{id}",
+      "test_case": "Accept request",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "friends",
+      "method": "GET",
+      "path": "/friends/",
+      "test_case": "Friend list",
+      "expected": "200 + friends",
+      "actual": "200 count=1",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "friends",
+      "method": "GET",
+      "path": "/friends/compare/{id}",
+      "test_case": "Compare stats",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "battles",
+      "method": "POST",
+      "path": "/battles/",
+      "test_case": "Create battle",
+      "expected": "201",
+      "actual": "500 Internal Server Error",
+      "status": "FAIL",
+      "notes": ""
+    },
+    {
+      "module": "analytics",
+      "method": "GET",
+      "path": "/analytics/dashboard",
+      "test_case": "Authenticated access",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "analytics",
+      "method": "GET",
+      "path": "/analytics/topics",
+      "test_case": "Authenticated access",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "analytics",
+      "method": "GET",
+      "path": "/analytics/submission-heatmap",
+      "test_case": "Authenticated access",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "analytics",
+      "method": "GET",
+      "path": "/analytics/difficulty-breakdown",
+      "test_case": "Authenticated access",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "analytics",
+      "method": "GET",
+      "path": "/analytics/weak-areas",
+      "test_case": "Authenticated access",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "analytics",
+      "method": "GET",
+      "path": "/analytics/dashboard",
+      "test_case": "No auth",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "notifications",
+      "method": "GET",
+      "path": "/notifications/",
+      "test_case": "List notifications",
+      "expected": "200",
+      "actual": "200 count=2",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "notifications",
+      "method": "GET",
+      "path": "/notifications/unread-count",
+      "test_case": "Unread count",
+      "expected": "200",
+      "actual": "{'unread_count': 2}",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "notifications",
+      "method": "PUT",
+      "path": "/notifications/{id}/read",
+      "test_case": "Mark read",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "notifications",
+      "method": "PUT",
+      "path": "/notifications/read-all",
+      "test_case": "Mark all read",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "codeforces",
+      "method": "GET",
+      "path": "/codeforces/profile",
+      "test_case": "No linked profile",
+      "expected": "404",
+      "actual": "404",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "codeforces",
+      "method": "POST",
+      "path": "/codeforces/link",
+      "test_case": "Valid handle link",
+      "expected": "200",
+      "actual": "200 handle=tourist",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "codeforces",
+      "method": "POST",
+      "path": "/codeforces/link",
+      "test_case": "Invalid handle",
+      "expected": "400/404",
+      "actual": "400",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "codeforces",
+      "method": "GET",
+      "path": "/codeforces/contests",
+      "test_case": "Contest list",
+      "expected": "200",
+      "actual": "200 count=303",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "codeforces",
+      "method": "POST",
+      "path": "/codeforces/sync",
+      "test_case": "Sync data",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "leaderboard",
+      "method": "GET",
+      "path": "/leaderboard/",
+      "test_case": "Global leaderboard",
+      "expected": "200 list",
+      "actual": "200 count=6",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "security",
+      "method": "GET",
+      "path": "/problems/?search=SQLi",
+      "test_case": "SQL injection in search",
+      "expected": "200 no crash",
+      "actual": "200 safe",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "security",
+      "method": "GET",
+      "path": "/users/search SQLi",
+      "test_case": "SQL injection in user search",
+      "expected": "no crash",
+      "actual": "200",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "module": "security",
+      "method": "POST",
+      "path": "/submissions/",
+      "test_case": "Large payload",
+      "expected": "handled gracefully",
+      "actual": "201",
+      "status": "PASS",
+      "notes": ""
+    }
+  ],
+  "perf_ms": {
+    "GET http://localhost:8000/": 11.08519994886592,
+    "GET http://localhost:8000/openapi.json": 107.48439998133108,
+    "POST http://localhost:8000/api/v1/auth/register": 363.7485000072047,
+    "POST http://localhost:8000/api/v1/auth/login": 307.32560000615194,
+    "GET http://localhost:8000/api/v1/auth/me": 13.698199996724725,
+    "POST http://localhost:8000/api/v1/auth/refresh": 55.485500022768974,
+    "POST http://localhost:8000/api/v1/auth/logout": 47.76420001871884,
+    "GET http://localhost:8000/api/v1/problems/": 69.73290001042187,
+    "GET http://localhost:8000/api/v1/problems/two-sum": 16.656699997838587,
+    "GET http://localhost:8000/api/v1/problems/nonexistent-slug-xyz": 7.533000025432557,
+    "GET http://localhost:8000/api/v1/problems/tags": 21.0298000019975,
+    "POST http://localhost:8000/api/v1/problems/": 94.76929996162653,
+    "GET http://localhost:8000/api/v1/users/profile/qa_user_a_4249097c": 11.212399986106902,
+    "GET http://localhost:8000/api/v1/users/profile/nonexistent_user_xyz": 7.384600001387298,
+    "PUT http://localhost:8000/api/v1/users/profile": 116.98409996461123,
+    "GET http://localhost:8000/api/v1/users/stats": 31.615399988368154,
+    "GET http://localhost:8000/api/v1/users/search": 15.335400006733835,
+    "POST http://localhost:8000/api/v1/submissions/": 138.38689995463938,
+    "GET http://localhost:8000/api/v1/submissions/f167e6a6-6a33-45b2-850e-ea82ce2aed1d": 18.301799951586872,
+    "POST http://localhost:8000/api/v1/submissions/run": 35.33769998466596,
+    "GET http://localhost:8000/api/v1/submissions/history": 16.803600010462105,
+    "GET http://localhost:8000/api/v1/submissions/": 3.8232000079005957,
+    "POST http://localhost:8000/api/v1/friends/request": 128.50269995396957,
+    "GET http://localhost:8000/api/v1/friends/requests": 15.375299961306155,
+    "POST http://localhost:8000/api/v1/friends/accept/5d1a8be9-dfe7-4356-b13e-208c82277999": 29.031699988991022,
+    "GET http://localhost:8000/api/v1/friends/": 15.596300014294684,
+    "GET http://localhost:8000/api/v1/friends/compare/f2cace9a-a592-4d6a-b9d7-b84ab46e0ce6": 24.715100007597357,
+    "POST http://localhost:8000/api/v1/battles/": 134.7434999770485,
+    "GET http://localhost:8000/api/v1/analytics/dashboard": 70.01759996637702,
+    "GET http://localhost:8000/api/v1/analytics/topics": 247.51640000613406,
+    "GET http://localhost:8000/api/v1/analytics/submission-heatmap": 44.5414999849163,
+    "GET http://localhost:8000/api/v1/analytics/difficulty-breakdown": 26.239899976644665,
+    "GET http://localhost:8000/api/v1/analytics/weak-areas": 22.205999994184822,
+    "GET http://localhost:8000/api/v1/notifications/": 13.521500048227608,
+    "GET http://localhost:8000/api/v1/notifications/unread-count": 14.861500007100403,
+    "PUT http://localhost:8000/api/v1/notifications/ee5b8f98-da5a-4e3f-acad-ae1858326aab/read": 18.96620000479743,
+    "PUT http://localhost:8000/api/v1/notifications/read-all": 16.229100001510233,
+    "GET http://localhost:8000/api/v1/codeforces/profile": 14.916099957190454,
+    "POST http://localhost:8000/api/v1/codeforces/link": 1630.3982000099495,
+    "GET http://localhost:8000/api/v1/codeforces/contests": 44.211699976585805,
+    "POST http://localhost:8000/api/v1/codeforces/sync": 911.8459000019357,
+    "GET http://localhost:8000/api/v1/leaderboard/": 56.759400002192706
+  }
+}

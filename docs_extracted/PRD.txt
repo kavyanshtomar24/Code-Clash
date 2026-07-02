@@ -1,0 +1,115 @@
+Product Requirements Document (PRD): Competitive Programming & DSA Platform
+Document Version: MVP v1.0
+Target Release Date: Q3 2026
+Document Status: Approved
+1. Product Overview
+The Competitive Programming & DSA Platform is a sophisticated, full-stack web application engineered to empower software engineering students, interview aspirants, and competitive programmers. By unifying core engineering practices, granular analytics, and real-time social vectors, the platform provides a cohesive, performance-oriented practice ecosystem.
+Unlike disparate, fragmented coding websites, this platform combines the interview-focused structural discipline of platforms like LeetCode with the dynamic, gamified, and community-driven edge of Codeforces. The central value proposition relies on delivering an all-in-one hub where users can hone Data Structures and Algorithms (DSA) fluency, benchmark their progress against peers, and experience real-time competitive pressures through synchronous coding battles.
+2. Problem Statement
+The contemporary technical preparation landscape suffers from intense platform fragmentation. Aspiring engineers and active competitive programmers typically find themselves switching across multiple ecosystems to complete a single study cycle:
+Solving algorithmic problems on platforms focused heavily on structured lists.
+Tracking global ratings and external historical data on third-party competitive tools.
+Manually comparing execution times and daily tracking metrics using Excel sheets or Discord groups.
+Arranging mock interviews or competitive practice matches via ad-hoc screen-sharing methods.
+This disjointed user experience induces high cognitive switching costs, fragments valuable historical performance data, and dampens user engagement. The proposed application centralizes problem-solving, progress aggregation, peer analytics, and real-time competitive features into a unified dashboard.
+3. Platform Goals & Core Target Audience
+The development of this ecosystem serves dual technical and consumer targets, structured cleanly to map architecture choices to real user requirements.
+Engineering Architecture Objectives: Serve as a portfolio-grade demonstration of full-stack capabilities, showcasing production-ready API design, asynchronous execution workers, horizontally scalable real-time state synchronization, and deterministic resource throttling.
+End-User Practice Objectives: Facilitate structured, topic-wise DSA learning paths, reward progression through visual feedback loops, automate tracking metrics, and leverage social accountability to maximize user retention.
+Target User Archetypes
+Primary Users: Computer Science/Engineering students preparing for university recruitment, interview candidates mastering core DSA concepts, and active Codeforces/LeetCode competitive programmers.
+Secondary Users: University coding circles, competitive programming student mentors, and structured technical bootcamp organizers seeking streamlined peer benchmarking features.
+4. MVP Scope Definition
+To ensure rapid deployment and robust core service quality, the initial launch strictly isolates foundation-critical features from advanced algorithmic abstractions.
+Functional Group
+Included in MVP (v1.0)
+Excluded from MVP (Future Scope)
+Identity & Accounts
+JWT-based Secure Auth, custom User Profiles, Bio, Platform Ratings.
+OAuth2 social log-ins, premium membership tiers.
+Problem Space
+Problem lists, difficulty categorization, topic-based tag filtering.
+Public custom contest creation, custom test-case configuration.
+IDE & Code Execution
+Web-based Monaco Editor, multi-language support, sandbox compilation.
+AI hints generator, interactive step-by-step code execution tracing.
+Social & Gamification
+Peer search, friend request lifecycles, progress charts comparison.
+Global group management, team battle tournaments.
+Real-Time Battles
+Private lobby invites, synchronized multi-user timers, live battle leaderboards.
+Voice integration, global public matchmaking pools.
+5. Functional Requirements (FR)
+The functional architecture specifies strict rules governing platform behavior, workflows, and algorithmic evaluation criteria.
+FR-1: User Authentication & Security Boundaries
+Description: The backend must support isolated workflows for account registration, credential validation, and stateless session invalidation.
+Acceptance Criteria: Credentials must be authenticated against hashed storage. Successful authorization returns short-lived JSON Web Tokens (JWT) inside secure storage. Protected resource routes must issue a 401 Unauthorized block status code for unauthenticated requests.
+FR-2: Dynamic Problem Management Engine
+Description: Users must seamlessly view, sort, search, and parse structured algorithmic problems via metadata schemas.
+Acceptance Criteria: Frontend problem inventories must render full title metadata, difficulty levels (Easy, Medium, Hard), and specific topic tags (e.g., Dynamic Programming, Graphs). Sorting and multifaceted filtering adjustments must occur responsively.
+FR-3: Isolated Submission & Verdict Pipeline
+Description: Code inputs provided via the custom embedded UI editor must be reliably processed against target test assertions.
+Acceptance Criteria: Submissions must route seamlessly to isolated backend runners, evaluate cleanly against predefined configurations, and securely persist structural records. Deterministic verdicts returned to the client interface must fall strictly within the defined operational parameters:
+Verdict Short-Code
+System Verification Context
+Accepted (AC)
+Source execution perfectly passes all validation test cases within designated constraints.
+Wrong Answer (WA)
+Source output diverges from the expected truth matrix values on one or more evaluation steps.
+Time Limit Exceeded (TLE)
+The compiled block fails to terminate within the pre-allocated execution window.
+Runtime Error (RE)
+The code crashes mid-execution (e.g., memory segmentation fault, division by zero, null pointer).
+FR-4: Analytics Dashboard Analytics
+Acceptance Criteria: User profiles must display total challenges completed, real-time submission metrics, algorithmic topic balance graphs, and historical activity matrix calendars. All analytics data must refresh dynamically following any submission state change.
+FR-5: Third-Party Codeforces Profile Synchronization
+Acceptance Criteria: The backend must poll the official public Codeforces API endpoints using a user-specified handle to retrieve verified historical ratings and tournament timelines, displaying them inside the primary dashboard layout.
+FR-6: Friend Management Engine
+Acceptance Criteria: System handles robust user searches, bidirectional state processing (Pending, Accepted, Blocked), and provides clean horizontal views for overlapping performance timelines.
+FR-7: Real-Time Coding Battles
+Acceptance Criteria: Provides dynamic lobby instantiation via persistent connections, multi-client invitation systems, identical task distributions, and instant leaderboard feedback updates. Sessions must automatically terminate once global countdowns expire.
+6. Non-Functional Requirements (NFR)
+Non-functional guidelines ensure engineering integrity, operational reliability, and sub-second user response profiles across scaled data scenarios.
+Performance SLAs: Standard CRUD endpoints must resolve within a 500ms server response ceiling under base load conditions. Analytical visualization dashboards must completely finish rendering complex canvas charts within 2.0 seconds of request initialization.
+Scalability & Modularity: The system architecture must emphasize decoupled design interfaces. The underlying code compilation mechanism must execute in isolated structures to allow horizontal compute distribution during multi-user live contest spikes.
+Security Assertions: Passwords must be systematically salted and hashed via Argon2id or bcrypt before data ingestion. Transmitted inputs must be validated against mutation injection attacks. Sandbox runtime constraints must rigorously block file system modifications or unrestricted outbound network calls from user code.
+Uptime Targets: The public platform must maintain a target production availability floor of 99% uptime over any given calendar month, excluding scheduled maintenance intervals.
+7. Technical Stack Matrix
+The system architecture incorporates modern, performant open-source standards to optimize real-time capabilities and isolated compilation.
+Layer
+Technology Selection
+Implementation Rationale
+Frontend
+React, React Router, Axios, Tailwind CSS
+Component reusability, modular layout construction, and declarative state orchestration.
+Code Editor
+Monaco Editor
+Delivers native VS Code syntax highlighting, automatic indentation, and multi-language structural mappings.
+Visualizations
+Recharts
+Declarative SVG visualization layers engineered to render complex timeline data.
+Backend API
+FastAPI (Python)
+Asynchronous ASGI operation, native OpenAPI automated schema production, and fast data validation via Pydantic.
+Persistence
+PostgreSQL, SQLAlchemy, Alembic
+Ensures strong ACID guarantees, robust query planning, and reliable database schema migration tracking.
+Real-Time Data
+WebSockets, Redis
+Enables bi-directional live communication channels, atomic state caching, and lightweight Pub/Sub multi-client coordination.
+Sandboxing
+Docker Containers
+Enforces total operating system isolation, process containment, and memory limits during untrusted code execution.
+Deployment
+Docker, Nginx, Vercel
+High-efficiency reverse proxy management, clear static asset caching, and global edge CDN content distribution.
+8. Success Evaluation Metrics
+The product evaluation cycle splits tracking insights across user experience, platform execution health, and engagement growth milestones.
+User Engagement Framework: Mean challenges resolved per individual profile session, Daily Active Users (DAU) retention, and peer battle interaction volumes.
+System Telemetry Metrics: P95 API response times, runtime error frequencies, and median internal queue submission compilation processing delay.
+Product Scaling Metrics: Retention curve values across 7-day windows, total external Codeforces accounts linked, and completed user-vs-user battles.
+9. Future Roadmap & Iterative Enhancements
+Post-MVP platform updates focus on shifting architectural scope towards advanced multi-tenant support, customized learning trajectories, and automated system mentoring.
+Version 2.0 (Contest Management Infrastructure): Engineering comprehensive multi-tier global contest structures, supporting automated challenge scheduling, and complex point-decay rating systems.
+Version 3.0 (AI Enrichment Layer): Implementing deep LLM pipelines to deliver non-blocking algorithmic insights, structural optimization feedback, and hyper-personalized topic learning trajectories.
+Version 4.0 (Enterprise & Multi-Platform Growth): Building corporate onboarding management spaces, inter-organization leagues, and full multi-platform synchronization tools.

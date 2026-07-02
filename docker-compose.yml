@@ -1,0 +1,93 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+        VITE_WS_BASE_URL: ws://localhost:8000
+    container_name: cpplatform-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    build: ./backend
+    container_name: cpplatform-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override localhost URLs from .env with Docker service hostnames
+      DATABASE_URL: postgresql+asyncpg://cpuser:cppassword@postgres:5432/cpplatform
+      REDIS_URL: redis://redis:6379/0
+      JUDGE_EMBEDDED_WORKER: "false"
+    volumes:
+      - ./backend/app:/app/app
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  judge_worker:
+    build: ./backend
+    container_name: cpplatform-judge
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cpuser:cppassword@postgres:5432/cpplatform
+      REDIS_URL: redis://redis:6379/0
+      JUDGE_EMBEDDED_WORKER: "false"
+    volumes:
+      - ./backend/app:/app/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["python", "-m", "app.services.judge_worker"]
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: cpplatform-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: cpplatform
+      POSTGRES_USER: cpuser
+      POSTGRES_PASSWORD: cppassword
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cpuser -d cpplatform"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: cpplatform-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+volumes:
+  pgdata:

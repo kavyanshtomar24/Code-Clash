@@ -1,0 +1,451 @@
+Application Flow Document
+Project: Competitive Programming & DSA Platform
+Version: MVP 1.0
+1. User Journey Overview
+The user journey outlines the macro-level progression of a user from initial discovery to active participation inside the platform. The standard lifecycle follows this progression:
+Landing Page: Introduction to the platform, core features, and entry points.
+Authentication: Registration of a new account or logging into an existing profile.
+Core Dashboard: Central hub displaying stats, analytics, and primary navigation nodes.
+Feature Navigation: Branching out into core modules: Problems, Profile, Friends, or Analytics.
+Problem Interaction Loop: Browsing the Problem List → Reading Problem Details → Code Execution in Online IDE → Code Submission → Verification and Verdict Delivery → Return to Dashboard with updated statistics.
+2. Landing Page & Authentication Flows
+Landing Page Flow
+The primary purpose of the Landing Page is to articulate the platform's value proposition and convert visitors into registered users.
+User Actions: Register a new account, Login to an existing account, or Explore feature previews.
+Navigation Anchors: Quick links to dedicated Login and Registration pages.
+Authentication Mechanics
+Secure session handling and user identity management are split into two primary streams:
+Flow Type
+Sequence of Actions
+Required Form Fields / Data Input
+Registration
+Navigate to Register Page → Populate Account Details → Submit Form → Backend Validation & Creation → Redirect to Dashboard
+Username, Email Address, Password, Confirm Password
+Login
+Navigate to Login Page → Input Credentials → Backend Authentication → Initialize Session → Redirect to Dashboard
+Username or Email, Password
+3. Core Dashboard Ecosystem
+The Dashboard serves as the operational home base for the user, presenting structured aggregations of their historical performance and real-time social streams.
+Information Architecture (Displays)
+Metrics Panel: Total problems solved, user accuracy rates, and current platform algorithmic rating.
+Activity Streams: Recent individual submissions and real-time feeds of friends' activities.
+Quick Actions Panel: Immediate links to trigger active site paths.
+Available Navigation Pathways
+From the Dashboard workspace, users can context-switch directly into five major modules:
+Solve Problems: Access the global problem repositories.
+Profile: Review deep personal archives and edit configurations.
+Friends: Manage social networks and comparative metrics.
+Analytics: Open data-driven performance overviews.
+Battles: Join or initiate live peer-to-peer coding challenges.
+4. Problem Solving, IDE, & Submission Pipeline
+This pipeline forms the primary engine of the platform, bringing users from discovery to code evaluation.
+Step 1: Browsing and Discovery
+Users navigate the global Problem List, using specific tooling options to locate targets:
+Filters: Filterable by Difficulty level (Easy, Medium, Hard) or Topic Tags (e.g., Graphs, Dynamic Programming, Greedy).
+Search: Direct text search query matching problem titles or keywords.
+Step 2: Problem Detail and Context Assembly
+Selecting a problem transitions the user to the Problem Detail Page, structured as follows:
+Metadata Header: Title, Difficulty Tier, and categorized algorithmic Tags.
+Core Content: Explicit Problem Statement, system Constraints (Time Limit, Memory Limit), and structured Example Test Cases (Inputs and expected Outputs).
+Primary Call-to-Action: "Open IDE" button to transition into development mode.
+Step 3: Online IDE Sandbox Environment
+The Online IDE Workspace contains the interactive tooling required to develop and verify solutions:
+Code Editor: Interactive syntax-highlighted editing container.
+Language Selector: Dropdown to swap compiler/interpreter environments (e.g., C++, Python, Java).
+Run Tooling: Compiles and tests code against visible example test cases, feeding stdout and execution logs back into an integrated Output Panel.
+Submit Tooling: Packages code contents for submission to the automated remote judge.
+Step 4: Automated Judge & Submission Pipeline
+Upon pressing "Submit Solution", the execution sequence flows asynchronously through the cloud backend infrastructure:
+Action Initiated → Backend Packages Source Code → Remote Isolated Sandboxed Judge Executes Against Comprehensive Test Harness → Verdict State Generated → Real-Time UI Render Update → Core User Statistics Mutated
+System Verdict
+Underlying System Meaning
+Accepted (AC)
+The program executed successfully and produced correct output for all hidden and public test suites.
+Wrong Answer (WA)
+The output produced by the program deviated from the expected output file on one or more test cases.
+Runtime Error (RE)
+The code crashed during execution (e.g., segmentation fault, division by zero, out of bounds memory access).
+Time Limit Exceeded (TLE)
+The solution failed to terminate within the designated maximum timeframe allocated to the problem statement.
+5. Profile & Performance Analytics Modules
+User Profile Hub
+Acts as the public-facing or private showcase of user credentials and historical engagement. It holds records of Username, Platform Rating, Problems Solved broken down by tier, total cumulative Accuracy percentage, chronological Submissions timeline, and full Friend Counts. Navigation within the profile hub breaks down into Submissions Logs, Deep Statistical Matrix, and Account Settings (Edit Profile).
+Deep Analytics Suite
+Designed for self-evaluation, allowing users to systematically isolate weakness parameters through data visualization charts:
+Rating Graph: Historical rating adjustments visualized over chronological time parameters.
+Topic Performance Matrix: Accuracy metrics categorized by individual data structures and algorithm types to pinpoint exact structural gaps.
+Submission Trends: Heatmaps tracking frequency and velocity of coding sessions.
+Accuracy Graph: Proportional ratios mapping Accepted attempts against failed verdicts.
+6. External Integration: Codeforces Sync Engine
+To enrich MVP platform capability, users can synchronize data directly from legacy systems using an explicit pipeline flow:
+Authentication and Handle Mapping
+Profile Settings Menu → Input External Codeforces Handle Identifier → Trigger Cryptographic verification steps → Validate Handshake → Persist and Save State
+Data Sync Execution Logic
+User/System Requests Sync Sequence → Platform Backend Queries External API Hooks → Data Collection Fetched → Parse and Map JSON Payloads → Persist to App Database → Refresh and Push UI Updates to Core Dashboard
+Synchronized Metrics
+The data pipeline specifically fetches and stores fields containing official External Ratings, Historical Competitive Contest Logs, and international Global Rankings.
+7. Social, Battle, & Communication Infrastructure
+Friend Management Architecture
+Discovery & Initiation: Navigate to Friends Module → Execute database lookup via text query → Select User Entity → Dispatch Network Connection Request.
+Acceptance Lifecycle: Event generates Notification to recipient → Recipient accepts handshake → Database establishes mutual relationship schema binding both profiles → Update visibility status across Friend Lists.
+Comparison View Workspace: Selecting an active contact launches a parallel comparison matrix mapping metrics alongside each other: Official Ratings, Total Count of Solved Problems, Historical Coding Accuracy, and Recent Platform Activities.
+Live Battle Room Module (P2P Challenges)
+The Battle Room allows real-time synchronous competition between two users over a unified algorithmic test case. The orchestration behaves along strict transitional steps:
+Creation: Access the active Friend list, press "Challenge Friend", filter/select specific problem pools, and emit an encrypted Live Room Invite hook.
+Acceptance: Challenged peer interacts with the incoming system alert window, accepts invite, and both clients are instantly pulled into a dedicated websocket connection inside a sandboxed Battle Room.
+Execution (Live Battle Mode): Synchronized execution clock triggers and counts down → Both contestants simultaneously parse identical problem layouts using individual editing sandboxes → Real-time status hooks stream live state adjustments (e.g., current compile errors, submission failures) to opposing panels → First user to pass all comprehensive target test arrays halts the clock, determining the winner.
+The interface for the Battle Room renders four key items: Active Match Countdown Timer, Problem Specification Text, Dual IDE code textareas, and Interactive Live Competitor Progress Hooks.
+Notifications Dispatch System
+The system manages user notifications for key events, tracking when a Friend Request is received, a connection is accepted, a Battle Invitation arrives, or final Match Outcomes are finalized. When an event fires, backend triggers write payload structures to the data store, pushing notification payloads immediately to client application UI layers for toast/tray updates.
+8. System Lifecycle: Session Termination
+To ensure session security, when a user expands the profile dropdown and clicks "Logout", the client invalidates locally stored authentication objects (JWT/Session Tokens), triggers a server-side token revocation call, wipes active application memory cache layers, and drops the user back to the default public Landing Page route.
+9. Comprehensive MVP Navigation Hierarchy
+The following architectural map lays out the navigation structure for the core components of the MVP application:
+Dashboard├── Problems│    ├── Problem List (Search & Filter)│    ├── Problem Details│    └── Online IDE Workspace├── Profile│    ├── Statistical Analytics Panel│    └── Historical Submissions Log├── Analytics Suite (Data Visualizations)├── Friends Network│    ├── Active Friend List│    ├── Pending Connection Requests│    └── Side-by-Side Profile Comparison Matrix├── Battles Arena│    ├── Active Challenge Lobbies│    ├── Personal Battle History Logs│    └── Live Battle Room Sandbox└── Settings (Account & Integration Management)
+10. MVP User Success Path
+The target user experience milestone tracking loop follows this critical path:
+Register Account → Solve First Coding Problem → Receive "Accepted" Verdict → Review Analytics Data → Form First Social Friend Connection → Dispatch Battle Challenge → Win Live Battle → Transition to Long-term Active User Status
+Backend Database Schema Specification
+Database Engine: PostgreSQL
+This document outlines the database schema architecture for the competitive programming platform, categorized by implementation phases from MVP to advanced integrations.
+Phase 1: MVP Core Tables
+These tables represent the absolute core functionality required for user authentication, problem management, test case execution, and code submission tracking.
+1. users
+Stores core user account and profile information.
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+username
+VARCHAR(50)
+UNIQUE
+email
+VARCHAR(255)
+UNIQUE
+password_hash
+TEXT
+-
+profile_picture
+TEXT
+-
+bio
+TEXT
+-
+codeforces_handle
+VARCHAR(100)
+-
+rating
+INTEGER
+Internal platform rating
+created_at
+TIMESTAMP
+-
+updated_at
+TIMESTAMP
+-
+2. problems
+Stores the coding problem statements and metadata.
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+title
+VARCHAR(255)
+-
+slug
+VARCHAR(255)
+UNIQUE (for URL clean routes)
+description
+TEXT
+Main problem markdown/text
+input_format
+TEXT
+-
+output_format
+TEXT
+-
+constraints
+TEXT
+-
+difficulty
+ENUM
+Allowed values: 'Easy', 'Medium', 'Hard'
+created_by
+UUID
+Foreign Key → users.id
+created_at
+TIMESTAMP
+-
+updated_at
+TIMESTAMP
+-
+3. tags
+Problem categorization tags (e.g., Arrays, Strings, Graphs, Trees, DP, Greedy).
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+name
+VARCHAR(100)
+UNIQUE
+4. problem_tags
+Many-to-many relationship tracking tags linked to individual problems.
+Field
+Type
+Constraints / Notes
+problem_id
+UUID
+Foreign Key → problems.id
+tag_id
+UUID
+Foreign Key → tags.id
+5. test_cases
+Maintains both hidden validation tests and user-visible sample test cases.
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+problem_id
+UUID
+Foreign Key → problems.id
+input
+TEXT
+Raw input stream
+expected_output
+TEXT
+Expected output stream
+is_sample
+BOOLEAN
+True if visible on problem description
+6. submissions
+Stores the results of runtime execution evaluation for code solutions.
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+user_id
+UUID
+Foreign Key → users.id
+problem_id
+UUID
+Foreign Key → problems.id
+language
+VARCHAR(20)
+e.g., 'cpp', 'python', 'java'
+source_code
+TEXT
+Submitted code codeblock
+verdict
+VARCHAR(50)
+Accepted, Wrong Answer, Time Limit Exceeded, Runtime Error, Compilation Error
+execution_time
+FLOAT
+In seconds
+memory_used
+INTEGER
+In Kilobytes/Megabytes
+submitted_at
+TIMESTAMP
+-
+7. user_problem_stats
+Caches the progress statistics of users per specific problem.
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+user_id
+UUID
+Foreign Key → users.id
+problem_id
+UUID
+Foreign Key → problems.id
+solved
+BOOLEAN
+-
+attempts
+INTEGER
+Counter for submissions
+first_solved_at
+TIMESTAMP
+Nullable until solved
+Phase 2: Social & Notification Features
+Expands the platform to support connections between users and instant operational update flags.
+1. friend_requests
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+sender_id
+UUID
+Foreign Key → users.id
+receiver_id
+UUID
+Foreign Key → users.id
+status
+VARCHAR(20)
+Pending, Accepted, Rejected
+created_at
+TIMESTAMP
+-
+2. friendships
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+user1_id
+UUID
+Foreign Key → users.id
+user2_id
+UUID
+Foreign Key → users.id
+created_at
+TIMESTAMP
+-
+3. notifications
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+user_id
+UUID
+Foreign Key → users.id
+type
+VARCHAR(50)
+Friend Request, Friend Accepted, Battle Invite, Battle Result
+title
+VARCHAR(255)
+-
+message
+TEXT
+-
+is_read
+BOOLEAN
+Default: false
+created_at
+TIMESTAMP
+-
+Phase 3: 1-vs-1 Real-time Coding Battles
+Enables competitive matchmaking structures for head-to-head coding challenges.
+1. battles
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+host_user_id
+UUID
+Foreign Key → users.id
+opponent_user_id
+UUID
+Foreign Key → users.id
+problem_id
+UUID
+Foreign Key → problems.id
+status
+VARCHAR(30)
+Pending, Active, Finished, Cancelled
+winner_id
+UUID
+Nullable; Foreign Key → users.id
+started_at
+TIMESTAMP
+-
+ended_at
+TIMESTAMP
+-
+2. battle_submissions
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+battle_id
+UUID
+Foreign Key → battles.id
+user_id
+UUID
+Foreign Key → users.id
+verdict
+VARCHAR(50)
+-
+submitted_at
+TIMESTAMP
+-
+Phase 4: Codeforces Profile Synchronization
+Integrates external analytics pipelines to track global contest histories and ratings.
+1. codeforces_profiles
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+user_id
+UUID
+Foreign Key → users.id
+handle
+VARCHAR(100)
+-
+current_rating
+INTEGER
+-
+max_rating
+INTEGER
+-
+rank
+VARCHAR(100)
+e.g., 'Grandmaster'
+synced_at
+TIMESTAMP
+-
+2. codeforces_contests
+Field
+Type
+Constraints / Notes
+id
+UUID
+Primary Key
+user_id
+UUID
+Foreign Key → users.id
+contest_id
+INTEGER
+-
+contest_name
+VARCHAR(255)
+-
+rank
+INTEGER
+-
+old_rating
+INTEGER
+-
+new_rating
+INTEGER
+-
+rating_change
+INTEGER
+-
+contest_date
+TIMESTAMP
+-

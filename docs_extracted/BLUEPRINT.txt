@@ -1,0 +1,645 @@
+CODECLASH
+Enterprise Architecture Blueprint
+Competitive Programming & DSA Platform
+CTO Technical Review  -  Backend Phase  -  Version 1.0  -  2026
+React + FastAPI
+Full-Stack
+PostgreSQL + Redis
+Data Layer
+Docker Sandbox
+Code Execution
+WebSocket
+Real-Time
+01 · EXECUTIVE ARCHITECTURE SUMMARY
+1. Executive Architecture Summary
+This document is a CTO-level technical review of the CodeClash Competitive Programming & DSA Platform. It covers every major architectural decision required to build a production-grade, portfolio-worthy system that survives resume screening at top-tier tech companies.
+⚡
+Architecture Decision: Modular Monolith chosen over Microservices for MVP. Reason: Lower operational complexity for a solo/small team, easier debugging, shared database transactions. The codebase is structured to extract services later without rewrites.
+1.1 Architecture Decision: Modular Monolith vs Microservices
+Dimension
+Modular Monolith ✅ CHOSEN
+Microservices ❌ Deferred
+Team Size
+1–3 devs; shared context wins
+Needs DevOps, separate CI/CD per service
+Deployment
+Single Docker Compose stack
+Kubernetes or complex orchestration needed
+Code Execution
+Judge spawns Docker containers; isolated enough
+Judge as separate service adds network latency
+Data Consistency
+Single PostgreSQL, ACID transactions
+Distributed transactions; saga pattern needed
+Interview Signal
+Shows trade-off awareness — strong signal
+Overkill without infra to show it running
+Migration Path
+Judge module extracted to service in Phase 2
+N/A — start point, not MVP target
+02 · SYSTEM ARCHITECTURE & DATA FLOWS
+2. System Architecture & Data Flows
+2.1 High-Level Architecture
+The platform follows a layered architecture with strict separation of concerns across five tiers:
+┌─────────────────────────────────────────────────────────────────┐
+│                    BROWSER / CLIENT LAYER                        │
+│    React 18 + Tailwind CSS + Monaco Editor + Recharts            │
+│    Axios (REST) + native WebSocket client                        │
+└───────────────────┬────────────────────┬────────────────────────┘
+│ HTTPS REST          │ WSS WebSocket
+┌───────────────────▼────────────────────▼────────────────────────┐
+│                 NGINX REVERSE PROXY (port 80/443)                │
+│  /api/** → FastAPI    /ws/** → FastAPI WS    /* → React SPA      │
+└───────────────────┬─────────────────────────────────────────────┘
+│
+┌───────────────────▼────────────────────────────────────────────┐
+│                    FASTAPI APPLICATION (Uvicorn)                 │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐  │
+│  │  Auth    │ │ Problems │ │  Users   │ │    Battles/WS    │  │
+│  │  Module  │ │  Module  │ │  Module  │ │     Module       │  │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘  │
+│  ┌──────────┐ ┌──────────┐ ┌──────────────────────────────┐  │
+│  │Submissions│ │  Friends │ │      Judge Worker Service    │  │
+│  │  Module  │ │  Module  │ │  (async task queue via Redis)│  │
+│  └──────────┘ └──────────┘ └──────────────────────────────┘  │
+└─────────────┬───────────────────┬──────────────────────────────┘
+│                   │
+┌─────────▼────┐    ┌────────▼────────┐   ┌────────────────┐
+│  PostgreSQL  │    │     Redis        │   │    Docker      │
+│  (Primary DB)│    │  Cache + PubSub  │   │  Sandbox Pool  │
+│  + Replicas  │    │  + Rate Limiter  │   │  (Judge Exec)  │
+└─────────────┘    └─────────────────┘   └────────────────┘
+2.2 Critical Data Flow: Problem Submission Pipeline
+This is the most complex and interview-worthy flow in the system. Every step is deliberate:
+Step
+Action
+Component
+Why This Way
+1
+User writes code in Monaco Editor, clicks Submit
+React Frontend
+Monaco gives VS Code-grade UX; validates locally first
+2
+POST /api/submissions — JWT validated, payload schema-checked
+FastAPI + Pydantic
+Pydantic v2 strips dangerous chars; rejects malformed payloads instantly
+3
+Submission record written to DB with status=PENDING
+PostgreSQL
+Optimistic write; decouples HTTP response from judge latency
+4
+Task pushed to Redis queue (LPUSH judge_queue)
+Redis List
+Async; frees the HTTP thread. Redis persists queue on crash
+5
+Judge worker (BRPOP) picks task, spawns Docker container
+Judge Worker + Docker SDK
+docker run --memory=256m --network=none; hard resource limits enforced
+6
+Container compiles + runs against all test cases, captures stdout/stderr
+Docker Container
+Complete OS isolation; user code cannot touch host filesystem or network
+7
+Verdict computed (AC/WA/TLE/RE), DB updated, Redis PubSub notified
+Judge Worker → PostgreSQL → Redis PubSub
+Single source of truth in DB; PubSub fans out to all connected WS clients
+8
+WebSocket server receives PubSub event, pushes to browser
+FastAPI WS + Redis PubSub
+< 200ms end-to-end from verdict generation to browser render
+2.3 Real-Time Battle Data Flow
+The battle system uses WebSocket rooms backed by Redis PubSub to synchronize two competing clients:
+User A (Host)          FastAPI WS Server         User B (Challenger)
+│                        │                          │
+│── POST /battles ──────▶│ Create battle record     │
+│◀─ {battle_id} ─────────│ Status = WAITING         │
+│                        │                          │
+│── WS /ws/battle/{id} ─▶│ Subscribe Redis channel  │
+│                        │  battle:{id}             │
+│                        │◀── POST /battles/{id}/join│
+│                        │◀── WS /ws/battle/{id} ───│
+│                        │                          │
+│◀─ battle_started ──────│── battle_started ───────▶│
+│   {problem, timer=30m} │   Redis PUBLISH          │
+│                        │                          │
+│── submit code ─────────▶│ Queue to judge           │
+│                        │                          │
+│◀─ submission_received ─│── submission_received ──▶│
+│   {user_a: PENDING}    │                          │
+│                        │                          │
+│◀─ leaderboard_updated ─│── leaderboard_updated ──▶│
+│   {user_a: AC, t=5:23} │   Judge verdict pushed   │
+│                        │                          │
+│◀─ battle_finished ─────│── battle_finished ───────▶│
+│   {winner: user_a}     │   Winner determined      │
+03 · DATABASE SCHEMA & INDEXING STRATEGY
+3. Database Schema & Indexing Strategy
+3.1 Complete PostgreSQL Schema
+-- USERS TABLE
+CREATE TABLE users (
+id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+username    VARCHAR(50)  UNIQUE NOT NULL,
+email       VARCHAR(255) UNIQUE NOT NULL,
+password_hash TEXT NOT NULL,  -- bcrypt hash
+rating      INTEGER DEFAULT 1200,  -- ELO-style
+cf_handle   VARCHAR(100),  -- Codeforces handle
+cf_rating   INTEGER,
+bio         TEXT,
+avatar_url  TEXT,
+is_active   BOOLEAN DEFAULT TRUE,
+created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_rating   ON users(rating DESC);  -- leaderboard
+-- PROBLEMS TABLE
+CREATE TABLE problems (
+id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+title        VARCHAR(255) NOT NULL,
+slug         VARCHAR(255) UNIQUE NOT NULL,  -- URL-safe
+difficulty   VARCHAR(10) CHECK (difficulty IN ('Easy','Medium','Hard')),
+description  TEXT NOT NULL,
+constraints  TEXT,
+examples     JSONB,  -- [{input, output, explanation}]
+editorial    TEXT,
+time_limit_ms  INTEGER DEFAULT 2000,
+memory_limit_mb INTEGER DEFAULT 256,
+is_active    BOOLEAN DEFAULT TRUE,
+created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_problems_difficulty ON problems(difficulty);
+CREATE INDEX idx_problems_slug      ON problems(slug);
+-- SUBMISSIONS TABLE  (high write volume)
+CREATE TABLE submissions (
+id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
+problem_id      UUID REFERENCES problems(id) ON DELETE CASCADE,
+language        VARCHAR(20) CHECK (language IN ('cpp','python','java')),
+code            TEXT NOT NULL,
+verdict         VARCHAR(20) DEFAULT 'PENDING',  -- AC/WA/TLE/RE/CE/PENDING
+execution_time_ms INTEGER,
+memory_used_kb  INTEGER,
+test_results    JSONB,  -- per-case breakdown
+submitted_at    TIMESTAMPTZ DEFAULT NOW()
+);
+-- Partial index: only index AC submissions (analytics)
+CREATE INDEX idx_subs_user_prob  ON submissions(user_id, problem_id);
+CREATE INDEX idx_subs_verdict    ON submissions(verdict) WHERE verdict = 'AC';
+CREATE INDEX idx_subs_submitted  ON submissions(submitted_at DESC);
+3.2 Indexing Strategy for Leaderboard Queries
+Leaderboard queries are read-heavy and must survive 1000 concurrent users. Strategy:
+Query Pattern
+Index Used
+Cache TTL in Redis
+Global leaderboard TOP 100
+idx_users_rating (DESC BRIN)
+TTL: 30s — stale reads acceptable
+User problem solved count
+idx_subs_user_prob + partial AC index
+TTL: 60s per user_id key
+Recent submissions feed
+idx_subs_submitted (TIMESTAMPTZ DESC)
+TTL: 10s — near real-time
+Topic-wise accuracy
+idx_problem_tags + submissions join
+TTL: 300s — heavy aggregation
+Friend comparison matrix
+idx_friendships_user covering index
+TTL: 120s — rate of change low
+04 · REST API DESIGN WITH VERSIONING
+4. REST API Design & Versioning Strategy
+4.1 Versioning Approach
+📌
+Use URL-path versioning: /api/v1/... — Easiest to understand, easy to test in browser, no header negotiation. When v2 ships, run both simultaneously behind Nginx, deprecate v1 with Sunset headers.
+4.2 Complete API Endpoint Catalog
+Method
+Endpoint
+Auth
+Description & Response
+POST
+/api/v1/auth/register
+Public
+Register user → {user_id, message}
+POST
+/api/v1/auth/login
+Public
+Login → {access_token, refresh_token, user}
+POST
+/api/v1/auth/refresh
+Refresh Token
+Rotate tokens → new {access_token}
+POST
+/api/v1/auth/logout
+JWT
+Blacklist token in Redis
+GET
+/api/v1/auth/me
+JWT
+Current user profile
+GET
+/api/v1/problems?difficulty=&tag=&search=&page=&limit=
+Public
+Paginated problem list with filters
+GET
+/api/v1/problems/{slug}
+Optional JWT
+Problem detail + user solve status if authed
+POST
+/api/v1/problems
+JWT + Admin
+Create problem (admin only)
+POST
+/api/v1/submissions
+JWT
+Submit code → {submission_id, status: PENDING}
+GET
+/api/v1/submissions/{id}
+JWT
+Poll verdict — also pushed via WS
+GET
+/api/v1/submissions/history?problem_id=
+JWT
+User submission history
+POST
+/api/v1/submissions/run
+JWT
+Run on custom input (no judge, no record)
+GET
+/api/v1/users/search?q=
+JWT
+Search users by username
+POST
+/api/v1/friends/request
+JWT
+Send friend request
+POST
+/api/v1/friends/accept/{request_id}
+JWT
+Accept pending request
+GET
+/api/v1/friends
+JWT
+Friend list with ratings
+POST
+/api/v1/battles
+JWT
+Create battle, returns invite link
+POST
+/api/v1/battles/{id}/join
+JWT
+Join battle room
+GET
+/api/v1/battles/{id}
+JWT
+Battle state + participants
+GET
+/api/v1/battles/history
+JWT
+User battle history
+GET
+/api/v1/analytics/dashboard
+JWT
+Aggregated stats for dashboard render
+GET
+/api/v1/analytics/topics
+JWT
+Per-tag accuracy breakdown
+POST
+/api/v1/codeforces/sync
+JWT
+Trigger Codeforces data sync
+05 · WEBSOCKET & REAL-TIME ARCHITECTURE
+5. WebSocket & Real-Time Architecture
+5.1 Connection Management Design
+FastAPI's native WebSocket support with Redis PubSub as the message bus. This decouples WebSocket connections from the API process — critical when you add a second server instance.
+# Connection Manager (backend/app/websocket/manager.py)
+class ConnectionManager:
+def __init__(self):
+# battle_id → set of WebSocket connections
+self.rooms: dict[str, set[WebSocket]] = defaultdict(set)
+self.redis = aioredis.from_url(settings.REDIS_URL)
+async def connect(self, ws: WebSocket, battle_id: str, user_id: str):
+await ws.accept()
+self.rooms[battle_id].add(ws)
+# Subscribe to Redis channel for this battle
+asyncio.create_task(self._redis_listener(battle_id))
+async def broadcast(self, battle_id: str, event: dict):
+# Publish to Redis; listener fans out to all WS clients
+await self.redis.publish(f"battle:{battle_id}", json.dumps(event))
+async def _redis_listener(self, battle_id: str):
+pubsub = self.redis.pubsub()
+await pubsub.subscribe(f"battle:{battle_id}")
+async for message in pubsub.listen():
+if message["type"] == "message":
+for ws in self.rooms[battle_id].copy():
+try: await ws.send_text(message["data"])
+except: self.rooms[battle_id].discard(ws)
+5.2 WebSocket Event Schema
+Event Type
+Payload Structure
+Trigger
+battle_started
+{battle_id, problem, duration_secs, participants}
+Both users connected; host triggers start
+submission_received
+{user_id, submission_id, status: PENDING}
+Code submitted to judge queue
+leaderboard_updated
+{rankings: [{user_id, verdict, time}]}
+Judge returns verdict for any participant
+battle_finished
+{winner_id, reason, final_standings}
+AC verdict received OR timer expires
+timer_tick
+{remaining_seconds}
+Server-side every 10s (not every second — reduces load)
+opponent_status
+{user_id, event: typing|submitted|disconnected}
+Real-time presence signals
+06 · REDIS CACHING STRATEGY
+6. Redis Caching & Rate Limiting Strategy
+6.1 Cache Key Architecture
+Redis Key Pattern
+Data Type
+TTL
+What It Stores
+problem_list:{difficulty}:{tag}:{page}
+String (JSON)
+300s
+Paginated problem arrays
+problem:{slug}
+String (JSON)
+3600s
+Full problem object with examples
+user:stats:{user_id}
+Hash
+60s
+solved_count, accuracy, rating
+leaderboard:global
+Sorted Set
+30s
+Scores for top-100 leaderboard
+leaderboard:battle:{id}
+Sorted Set
+Until end
+Live battle rankings (score = time)
+session:blacklist:{jti}
+String
+Token TTL
+Revoked JWT token IDs
+ratelimit:submit:{user_id}
+String (counter)
+60s window
+Submission rate limit counter
+ratelimit:login:{ip}
+String (counter)
+300s window
+Login attempt rate limiter
+judge_queue
+List (LPUSH/BRPOP)
+Persistent
+Judge task queue
+battle:{battle_id}
+PubSub Channel
+While active
+WS event fan-out
+cf_cache:{cf_handle}
+String (JSON)
+1800s
+Codeforces API response cache
+⚠️
+Cache Invalidation Strategy: On submission AC verdict → INCR user:stats:{id} solved_count, INVALIDATE problem_list keys, UPDATE leaderboard sorted set. On problem create/edit → DEL problem:{slug} + DEL all problem_list:* keys (scan + pipeline delete).
+07 · SECURITY ARCHITECTURE
+7. Security Architecture
+7.1 JWT Refresh Token Rotation
+Short-lived access tokens (15 min) + long-lived refresh tokens (7 days) stored in HttpOnly cookies. On every refresh, the old refresh token is immediately blacklisted in Redis.
+Security Layer
+Implementation Detail
+Password Hashing
+bcrypt with cost factor 12. Never store plaintext. Use passlib[bcrypt]. Argon2id preferred for new systems.
+JWT Strategy
+Access: 15min exp, HS256. Refresh: 7d exp, stored HttpOnly cookie. Token JTI blacklist in Redis on logout/refresh.
+Input Validation
+Pydantic models on every endpoint. NEVER raw SQL strings — SQLAlchemy ORM only. Whitelist language values.
+Code Sandbox
+docker run --network=none --memory=256m --cpus=0.5 --read-only --tmpfs /tmp:size=16m --ulimit nproc=50. Container killed after time_limit + 1s.
+Rate Limiting
+Login: 5 attempts/5min per IP. Submission: 10/min per user. API: 100 req/min per user. Implemented via Redis INCR + EXPIRE.
+CORS Policy
+Whitelist only: https://codeclash.vercel.app in production. No wildcard origins.
+WS Auth
+JWT passed as ?token= query param on WS handshake. Validated before connection accepted. Expired tokens → close(4001).
+SQL Injection
+ORM-only queries. Raw SQL in Alembic migrations only. Parameterized queries enforced via SQLAlchemy Core for complex aggregations.
+08 · AUTOMATED JUDGE SYSTEM
+8. Automated Judge System Design
+8.1 Architecture Overview
+🎯
+Phase 1 (MVP): Single judge worker, submissions stored immediately. Phase 2: Multiple worker processes, Docker container pool pre-warmed for lower cold-start latency.
+# backend/app/services/judge_worker.py
+async def process_submission(task: dict) -> Verdict:
+submission = task["submission"]
+problem = await get_problem(submission["problem_id"])
+# 1. Write code to temp file
+with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
+f.write(submission["code"].encode())
+code_path = f.name
+# 2. Run Docker container
+result = await run_in_docker(
+image=LANGUAGE_IMAGES[submission["language"]],
+code_path=code_path,
+test_cases=problem.test_cases,
+time_limit_ms=problem.time_limit_ms,
+memory_limit_mb=problem.memory_limit_mb
+)
+# 3. Update DB + notify via Redis PubSub
+await update_submission_verdict(submission["id"], result)
+await redis.publish(f"submission:{submission['id']}",
+json.dumps(result))
+8.2 Docker Execution Specification
+Language
+Docker Image
+Compile + Run Command
+C++
+gcc:13-alpine (smallest possible)
+g++ -O2 -o /tmp/sol /code.cpp && /tmp/sol
+Python 3
+python:3.12-alpine
+python3 /code.py
+Java
+openjdk:21-jre-slim
+javac /Solution.java && java Solution
+8.3 Verdict Decision Tree
+Container exits → exit_code, stdout, stderr, elapsed_ms, peak_memory_kb
+if compile failed (exit_code == 1 at compile step):
+verdict = CE  (Compilation Error)
+elif elapsed_ms > time_limit_ms:
+verdict = TLE
+elif peak_memory_kb > memory_limit_mb * 1024:
+verdict = MLE
+elif exit_code != 0:
+verdict = RE  (Runtime Error — SIGSEGV, exceptions)
+elif stdout.strip() == expected_output.strip():
+verdict = AC
+else:
+verdict = WA
+09 · DEPLOYMENT & DOCKER ARCHITECTURE
+9. Deployment Architecture
+9.1 Docker Compose Stack
+# docker-compose.yml
+services:
+nginx:
+image: nginx:alpine
+ports: ["80:80", "443:443"]
+depends_on: [api]
+api:
+build: ./backend
+command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+environment: [DATABASE_URL, REDIS_URL, JWT_SECRET]
+volumes:
+- /var/run/docker.sock:/var/run/docker.sock  # judge needs this
+judge_worker:
+build: ./backend
+command: python -m app.services.judge_worker
+deploy:
+replicas: 2  # horizontal scale for judge load
+db:
+image: postgres:16-alpine
+volumes: [postgres_data:/var/lib/postgresql/data]
+redis:
+image: redis:7-alpine
+command: redis-server --appendonly yes  # persistence
+9.2 Multi-Stage Dockerfile
+# Stage 1: Build dependencies only
+FROM python:3.12-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+# Stage 2: Lean runtime image (~200MB vs ~900MB)
+FROM python:3.12-slim AS runtime
+WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY . .
+RUN adduser --disabled-password --no-create-home appuser
+USER appuser  # Never run as root
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+10 · SCALABILITY & PERFORMANCE
+10. Scalability & Performance Considerations
+10.1 Bottleneck Analysis & Mitigations
+Bottleneck
+Impact
+Mitigation Strategy
+Judge System
+HIGH
+Scale judge_worker replicas horizontally. Redis queue absorbs burst. Docker container pool pre-warmed. Rate limit: 10 submissions/min/user.
+PostgreSQL Read Load
+MEDIUM
+Read replica for analytics/leaderboard queries. Connection pool via asyncpg (max 20 conns). Redis caches hot reads.
+WebSocket Connections
+MEDIUM
+Redis PubSub decouples from process. 1000 concurrent WS connections manageable on a single Uvicorn worker. Scale with Gunicorn workers if needed.
+Codeforces API Rate
+LOW
+Cache CF responses for 30min (redis cf_cache:{handle}). Expose manual sync only, not automatic polling.
+Leaderboard Queries
+LOW
+Redis Sorted Set (ZADD/ZRANGE) for O(log n) operations. Refresh every 30s from background task. Never query DB for top-100.
+Docker Cold Start
+MEDIUM
+Pre-pull all language images on server start. Consider container pool (3–5 warm containers) in Phase 2.
+10.2 Performance SLA Compliance
+Endpoint
+Target SLA
+Achievable With
+Risk
+GET /api/v1/problems (list)
+< 500ms
+Redis cache hit
+LOW
+POST /api/v1/submissions
+< 500ms
+Async queue; returns PENDING immediately
+LOW
+Judge verdict delivery
+< 5s
+Docker + Redis PubSub
+MEDIUM
+GET /analytics/dashboard
+< 2s
+Pre-computed Redis hash
+LOW
+WebSocket battle events
+< 200ms
+Redis PubSub < 5ms + WS send
+LOW
+11 · CI/CD PIPELINE
+11. CI/CD Pipeline Recommendation
+11.1 GitHub Actions Pipeline
+# .github/workflows/backend.yml
+on: [push, pull_request]
+jobs:
+test:
+runs-on: ubuntu-latest
+services:
+postgres: {image: postgres:16, env: {POSTGRES_PASSWORD: test}}
+redis: {image: redis:7}
+steps:
+- uses: actions/checkout@v4
+- run: pip install -r requirements.txt pytest httpx
+- run: alembic upgrade head  # run migrations
+- run: pytest tests/ --cov=app --cov-report=xml
+- run: docker build -t codeclash-api .
+deploy: (on main branch only)
+- docker build --target runtime -t ghcr.io/user/codeclash:$SHA .
+- docker push ghcr.io/user/codeclash:$SHA
+- ssh deploy@server docker compose pull && docker compose up -d
+12 · TESTING STRATEGY
+12. Testing Strategy
+Test Type
+Tool
+What to Test
+Unit Tests
+pytest
+Verdict logic (AC/WA/TLE/RE), JWT token generation/validation, password hashing, Pydantic schema validation
+Integration Tests
+pytest + httpx
+Full auth flow (register→login→protected route), submission pipeline (submit→PENDING→AC), friend request lifecycle
+WebSocket Tests
+websockets lib
+Battle room creation, broadcast to both clients, timer events, battle_finished event on AC
+Load Tests
+Locust
+Simulate 1000 concurrent users: 60% browsing problems, 30% submitting code, 10% in battles. Target: no P95 above SLA.
+Security Tests
+bandit + manual
+SQL injection attempts, JWT manipulation, code sandbox escape attempts, rate limit bypass
+13 · RESUME-WORTHY TALKING POINTS
+13. Interview & Resume Talking Points
+These are precise, technically accurate answers to the questions interviewers at top companies will ask about this project:
+Interview Question
+Strong Answer Using This Architecture
+"Tell me about your architecture decision"
+Chose modular monolith over microservices deliberately — lower operational overhead for MVP, codebase structured for service extraction. Judge worker is the natural first extraction candidate.
+"How did you handle security for code execution?"
+Docker containers with --network=none, --memory=256m, --cpus=0.5, read-only filesystem. Container killed after time_limit+1s. User code literally cannot reach the network or host filesystem.
+"How does your real-time system work?"
+WebSocket connections subscribe to Redis PubSub channels keyed by battle_id. Judge worker publishes verdicts to the channel. This decouples the WS server from the judge — critical for horizontal scaling.
+"What was your biggest scaling challenge?"
+The judge system under burst contest traffic. Solved with Redis as async queue (LPUSH/BRPOP), judge workers scaled horizontally via docker compose replicas, and per-user rate limiting to prevent queue flooding.
+"How did you design the database?"
+UUID primary keys for distribution safety, composite index on (user_id, problem_id) for O(1) "has user solved problem" checks, partial index on verdict=AC to make analytics cheap, JSONB for flexible test case storage.
+"What trade-offs did you make?"
+Leaderboard uses eventual consistency — Redis sorted set updated async, 30s stale reads acceptable vs guaranteed consistency requiring expensive DB locks. Chose availability over consistency here, classic CAP trade-off.
+"How did you handle authentication?"
+JWT with refresh token rotation. Access tokens expire in 15 minutes. Refresh tokens stored HttpOnly, rotated on every use. Revoked JTIs blacklisted in Redis with matching TTL.
+"What would you change if you had more time?"
+Extract judge into a separate microservice with proper message broker (RabbitMQ/SQS), add PostgreSQL read replica for analytics, implement connection pooling with PgBouncer, add distributed tracing with OpenTelemetry.
+14 · NEXT STEP — FRONTEND PHASE
+14. Frontend Phase — Awaiting UI Inspiration
+🎨  Frontend Design Phase — Ready to Begin
+The backend architecture is fully specified. Before implementing the frontend, please share UI inspiration so the design matches your vision exactly.
+Share any of the following:
+Screenshots or links to platforms you like (LeetCode, Codeforces, Codebeat, etc.)
+Color schemes or dark/light mode preference
+Dribbble/Figma links or reference designs
+Any specific vibe: minimal, glassmorphism, dashboard-heavy, hacker aesthetic

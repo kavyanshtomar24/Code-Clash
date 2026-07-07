@@ -20,7 +20,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     CODEFORCES_API_URL: str = "https://codeforces.com/api"
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://code-clash-omega.vercel.app",
+        "https://code-clash-4rr3n46xu-ktommar02-5800s-projects.vercel.app",
+    ]
+    CORS_ORIGIN_REGEX: str | None = r"https://code-clash.*\.vercel\.app"
     DEBUG: bool = True
 
     # Admin usernames (comma-separated in env) may create problems

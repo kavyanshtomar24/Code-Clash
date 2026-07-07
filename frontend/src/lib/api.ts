@@ -19,7 +19,18 @@ import type {
   UserStats,
 } from './types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+const LOCAL_API_BASE_URL = 'http://localhost:8000'
+const PRODUCTION_API_BASE_URL = 'https://code-clash-ulkn.onrender.com'
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL
+const isLocalFrontend =
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+
+const API_BASE_URL =
+  configuredApiBaseUrl && (isLocalFrontend || !configuredApiBaseUrl.includes('localhost'))
+    ? configuredApiBaseUrl.replace(/\/$/, '')
+    : isLocalFrontend
+      ? LOCAL_API_BASE_URL
+      : PRODUCTION_API_BASE_URL
 
 export const api = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,

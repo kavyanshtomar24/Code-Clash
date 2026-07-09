@@ -563,9 +563,20 @@ function BattlesPage() {
 function BattleRoomPage() {
   const queryClient = useQueryClient()
   const { id = '' } = useParams()
+  const { user } = useAuth()
   const [battleNotice, setBattleNotice] = useState('')
   const battle = useQuery({ queryKey: ['battle', id], queryFn: () => endpoints.battles.detail(id), enabled: Boolean(id) })
   const problem = useQuery({ queryKey: ['problem', battle.data?.problem_slug], queryFn: () => endpoints.problems.detail(battle.data!.problem_slug), enabled: Boolean(battle.data?.problem_slug) })
+  
+  const joinBattle = useMutation({
+    mutationFn: () => endpoints.battles.join(id),
+    onSuccess: (updatedBattle) => {
+      queryClient.setQueryData(['battle', id], updatedBattle)
+      queryClient.invalidateQueries({ queryKey: ['battles'] })
+    },
+    onError: (error) => setBattleNotice(errorMessage(error)),
+  })
+
   const endBattle = useMutation({
     mutationFn: endpoints.battles.end,
     onSuccess: (ended) => {
@@ -586,6 +597,10 @@ function BattleRoomPage() {
     }
   }
 
+  const isHost = battle.data?.host_user_id === user?.id
+  const isPending = battle.data?.status === 'pending'
+  const isParticipant = battle.data?.host_user_id === user?.id || battle.data?.opponent_user_id === user?.id
+
   return (
     <Page
       title="Live Battle Room"
@@ -599,10 +614,40 @@ function BattleRoomPage() {
         <Panel title="Match telemetry" loading={battle.isLoading}>
           {battleNotice && <p className={endBattle.isError ? 'form-error' : 'status-message'}>{battleNotice}</p>}
           {battle.data && <BattleTelemetry battle={battle.data} />}
+          
+          {battle.data && isPending && !isHost && (
+            <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+              <button
+                className="primary-button full"
+                onClick={() => joinBattle.mutate()}
+                disabled={joinBattle.isPending}
+                style={{ padding: '1rem' }}
+                type="button"
+              >
+                {joinBattle.isPending ? 'Joining Battle...' : 'Accept & Join Battle'}
+              </button>
+              {joinBattle.error && <p className="form-error" style={{ marginTop: '0.5rem' }}>{errorMessage(joinBattle.error)}</p>}
+            </div>
+          )}
         </Panel>
         <Panel title="Problem package" loading={problem.isLoading}>
           {problem.data && <ProblemSpec problem={problem.data} compact />}
-          {battle.data && <Link className="primary-button" to={`/problems/${battle.data.problem_slug}/ide`}>Open battle IDE</Link>}
+          {battle.data && (
+            isPending && !isHost ? (
+              <button
+                className="primary-button"
+                onClick={() => joinBattle.mutate()}
+                disabled={joinBattle.isPending}
+                type="button"
+              >
+                {joinBattle.isPending ? 'Joining...' : 'Join Battle'}
+              </button>
+            ) : (
+              battle.data.status === 'active' && isParticipant && (
+                <Link className="primary-button" to={`/problems/${battle.data.problem_slug}/ide`}>Open battle IDE</Link>
+              )
+            )
+          )}
         </Panel>
       </div>
     </Page>
@@ -616,9 +661,21 @@ function SubmissionsPage() {
 
 function NotificationsPage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const notifications = useQuery({ queryKey: ['notifications'], queryFn: endpoints.notifications.list })
   const read = useMutation({ mutationFn: endpoints.notifications.read, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }) })
   const readAll = useMutation({ mutationFn: endpoints.notifications.readAll, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }) })
+  
+  const joinBattle = useMutation({
+    mutationFn: endpoints.battles.join,
+    onSuccess: (battle) => {
+      navigate(`/battles/${battle.id}`)
+    },
+    onError: (err) => {
+      alert(errorMessage(err))
+    }
+  })
+
   return (
     <Page title="Notifications" action={<button className="ghost-button" onClick={() => readAll.mutate()} type="button">Mark all read</button>}>
       <Panel title="Event tray" loading={notifications.isLoading}>
@@ -628,7 +685,47 @@ function NotificationsPage() {
               <strong>{item.title}</strong>
               <span>{item.notification_type}</span>
               <p>{item.message}</p>
-              {!item.is_read && <button className="ghost-button" onClick={() => read.mutate(item.id)} type="button">Mark read</button>}
+              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                {item.notification_type === 'battle_invite' && item.reference_id && (
+                  <>
+                    <button
+                      className="primary-button"
+                      style={{ minHeight: '32px', height: '32px', padding: '0 12px', fontSize: '13px' }}
+                      onClick={() => joinBattle.mutate(item.reference_id!)}
+                      disabled={joinBattle.isPending}
+                      type="button"
+                    >
+                      {joinBattle.isPending ? 'Joining...' : 'Accept & Join'}
+                    </button>
+                    <Link
+                      className="ghost-button"
+                      style={{ minHeight: '32px', height: '32px', padding: '0 12px', fontSize: '13px' }}
+                      to={`/battles/${item.reference_id}`}
+                    >
+                      View Room
+                    </Link>
+                  </>
+                )}
+                {item.notification_type === 'friend_request' && (
+                  <Link
+                    className="primary-button"
+                    style={{ minHeight: '32px', height: '32px', padding: '0 12px', fontSize: '13px' }}
+                    to="/friends"
+                  >
+                    View Requests
+                  </Link>
+                )}
+                {!item.is_read && (
+                  <button
+                    className="ghost-button"
+                    style={{ minHeight: '32px', height: '32px', padding: '0 12px', fontSize: '13px' }}
+                    onClick={() => read.mutate(item.id)}
+                    type="button"
+                  >
+                    Mark read
+                  </button>
+                )}
+              </div>
             </article>
           ))}
         </div>

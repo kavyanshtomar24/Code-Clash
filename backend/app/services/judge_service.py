@@ -242,7 +242,7 @@ async def _onlinecompiler_submit(
         return {"status": "error", "error": f"Unsupported language: {language}", "output": "", "time": "0"}
 
     headers = {
-        "Authorization": f"Bearer {settings.ONLINECOMPILER_API_KEY}",
+        "Authorization": settings.ONLINECOMPILER_API_KEY,
         "Content-Type": "application/json",
     }
 

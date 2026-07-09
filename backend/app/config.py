@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     JUDGE_EMBEDDED_WORKER: bool = True
     DOCKER_HOST: str | None = None
 
+    # OnlineCompiler.io API (cloud judge fallback when Docker is unavailable)
+    ONLINECOMPILER_API_KEY: str | None = None
+
     # Rate limits (blueprint §7)
     RATE_LIMIT_LOGIN_PER_IP: int = 5
     RATE_LIMIT_LOGIN_WINDOW_SEC: int = 300

@@ -106,7 +106,7 @@ app.include_router(api_v1_router)
 app.include_router(ws_router)
 
 
-@app.get("/", tags=["Health"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["Health"])
 async def root():
     """Health-check endpoint."""
     return {"status": "healthy", "version": "1.0.0", "service": "codeclash-api"}

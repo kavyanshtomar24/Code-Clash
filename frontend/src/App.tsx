@@ -611,6 +611,21 @@ function BattleRoomPage() {
       )}
     >
       <div className="content-grid">
+        {battle.data?.status === 'finished' && (
+          <div className="battle-result-banner" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(243,194,123,0.12), rgba(243,194,123,0.04))', border: '1px solid rgba(243,194,123,0.3)', borderRadius: '12px', padding: '2rem', textAlign: 'center', marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '14px', color: '#b9b9b9', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px' }}>Battle Complete</p>
+            <h2 style={{ fontSize: '28px', color: '#f6f6f6', margin: '0 0 0.5rem' }}>
+              {battle.data.winner_username
+                ? `🏆 ${battle.data.winner_username} Wins!`
+                : '🤝 Draw — No Winner'}
+            </h2>
+            {battle.data.winner_id && (
+              <p style={{ color: battle.data.winner_id === user?.id ? '#5ee87a' : '#f87171', fontSize: '16px', fontWeight: 600 }}>
+                {battle.data.winner_id === user?.id ? 'Congratulations, you won! (+50 rating)' : 'Better luck next time (-20 rating)'}
+              </p>
+            )}
+          </div>
+        )}
         <Panel title="Match telemetry" loading={battle.isLoading}>
           {battleNotice && <p className={endBattle.isError ? 'form-error' : 'status-message'}>{battleNotice}</p>}
           {battle.data && <BattleTelemetry battle={battle.data} />}
@@ -921,7 +936,16 @@ function DifficultyBars({ data }: { data?: { easy_solved: number; medium_solved:
 }
 
 function BattleTelemetry({ battle }: { battle: Battle }) {
-  return <div className="telemetry"><MetricGrid items={[['Status', battle.status, <Activity size={20} />], ['Duration', `${Math.round(battle.duration_seconds / 60)} min`, <Gauge size={20} />], ['Host', battle.host_username, <Users size={20} />], ['Opponent', battle.opponent_username ?? 'Pending', <Swords size={20} />]]} /></div>
+  const items: Array<[string, React.ReactNode, React.ReactNode]> = [
+    ['Status', battle.status.charAt(0).toUpperCase() + battle.status.slice(1), <Activity size={20} />],
+    ['Duration', `${Math.round(battle.duration_seconds / 60)} min`, <Gauge size={20} />],
+    ['Host', battle.host_username, <Users size={20} />],
+    ['Opponent', battle.opponent_username ?? 'Pending', <Swords size={20} />],
+  ]
+  if (battle.status === 'finished') {
+    items.push(['Winner', battle.winner_username ? `🏆 ${battle.winner_username}` : 'Draw', <Medal size={20} />])
+  }
+  return <div className="telemetry"><MetricGrid items={items} /></div>
 }
 
 function TextInput({ label, type = 'text', registration, error }: { label: string; type?: string; registration: object; error?: string }) {

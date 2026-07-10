@@ -289,6 +289,8 @@ async def submit_battle_solution(
     sub_stmt = select(Submission).where(Submission.id == sub.id)
     sub_res = await db.execute(sub_stmt)
     sub = sub_res.scalars().first()
+    if sub:
+        await db.refresh(sub)
 
     battle_sub = BattleSubmission(
         battle_id=battle_id,
@@ -297,6 +299,7 @@ async def submit_battle_solution(
     )
     db.add(battle_sub)
     await db.commit()
+    await db.refresh(battle)
 
     from app.websocket.manager import ws_manager
 

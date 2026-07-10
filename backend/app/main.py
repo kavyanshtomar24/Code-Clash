@@ -110,3 +110,9 @@ app.include_router(ws_router)
 async def root():
     """Health-check endpoint."""
     return {"status": "healthy", "version": "1.0.0", "service": "codeclash-api"}
+
+
+@app.api_route("/docs", methods=["GET", "HEAD"], tags=["Health"])
+async def docs_fallback():
+    """Health-check fallback for Render."""
+    return {"status": "healthy", "version": "1.0.0", "service": "codeclash-api"}

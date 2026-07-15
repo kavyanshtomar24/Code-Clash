@@ -128,6 +128,57 @@ export type DashboardAnalytics = {
   submission_heatmap: SubmissionHeatmap[]
   difficulty_breakdown: DifficultyBreakdown
   weak_areas: WeakArea[]
+  current_streak: number
+  longest_streak: number
+}
+
+export type RatingHistoryRecord = {
+  id: UUID
+  rating: number
+  rating_change: number
+  battle_id?: UUID | null
+  recorded_at: string
+}
+
+export type BattleHistoryRow = {
+  battle_id: UUID
+  opponent_username: string
+  opponent_picture?: string | null
+  problem_title: string
+  problem_slug: string
+  outcome: 'won' | 'lost' | 'draw'
+  rating_change: number
+  duration_seconds: number
+  started_at?: string | null
+  ended_at?: string | null
+}
+
+export type PaginatedBattleHistory = {
+  battles: BattleHistoryRow[]
+  total: number
+  page: number
+  per_page: number
+  total_pages: number
+}
+
+export type LanguageStats = {
+  language: string
+  count: number
+  percentage: number
+}
+
+export type ProblemStatistics = {
+  problem_title: string
+  total_submissions: number
+  accepted: number
+  wrong_answer: number
+  tle: number
+  runtime_error: number
+  compile_error: number
+  solve_rate: number
+  unique_solvers: number
+  unique_attempted: number
+  language_breakdown: LanguageStats[]
 }
 
 export type Friend = {

@@ -33,6 +33,7 @@ async def list_problems(
     difficulty: str | None = Query(None, description="Filter by difficulty"),
     tag: str | None = Query(None, description="Filter by tag name"),
     search: str | None = Query(None, description="Search in title"),
+    status: str | None = Query(None, pattern="^(solved|unsolved|attempted)$", description="Filter by solve status"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     current_user: User | None = Depends(get_current_user_optional),
@@ -46,6 +47,7 @@ async def list_problems(
         difficulty=difficulty,
         tag=tag,
         search=search,
+        status=status,
         page=page,
         per_page=per_page,
     )
@@ -142,3 +144,16 @@ async def create_problem(
         ],
         created_at=problem.created_at,
     )
+
+
+@router.get(
+    "/{slug}/statistics",
+    summary="Problem statistics",
+)
+async def get_problem_statistics(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return aggregated statistics for a problem: solve rate, verdict breakdown, language usage."""
+    from app.services.problem_stats_service import get_problem_statistics
+    return await get_problem_statistics(db, slug)

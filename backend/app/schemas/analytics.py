@@ -56,3 +56,5 @@ class DashboardAnalyticsResponse(BaseModel):
     submission_heatmap: list[SubmissionHeatmap]
     difficulty_breakdown: DifficultyBreakdown
     weak_areas: list[WeakAreaAnalysis]
+    current_streak: int
+    longest_streak: int

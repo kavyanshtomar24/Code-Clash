@@ -20,6 +20,7 @@ from app.models.battle import Battle, BattleSubmission
 from app.models.problem import Problem
 from app.models.submission import Submission
 from app.models.user import User
+from app.models.rating_history import RatingHistory
 from app.services.notification_service import notification_service
 from app.services.submission_service import create_submission
 
@@ -324,11 +325,18 @@ async def submit_battle_solution(
         battle.winner_id = user_id
         battle.ended_at = now
 
-        stmt_winner = select(User).where(User.id == user_id)
+        stmt_winner = select(User).where(User.id == user_id).with_for_update()
         winner_res = await db.execute(stmt_winner)
         winner = winner_res.scalars().first()
         if winner:
             winner.rating += 50
+            # Log rating history for winner
+            db.add(RatingHistory(
+                user_id=winner.id,
+                battle_id=battle.id,
+                rating=winner.rating,
+                rating_change=50
+            ))
 
         loser_id = (
             battle.opponent_user_id
@@ -336,11 +344,18 @@ async def submit_battle_solution(
             else battle.host_user_id
         )
         if loser_id:
-            stmt_loser = select(User).where(User.id == loser_id)
+            stmt_loser = select(User).where(User.id == loser_id).with_for_update()
             loser_res = await db.execute(stmt_loser)
             loser = loser_res.scalars().first()
             if loser:
                 loser.rating = max(0, loser.rating - 20)
+                # Log rating history for loser
+                db.add(RatingHistory(
+                    user_id=loser.id,
+                    battle_id=battle.id,
+                    rating=loser.rating,
+                    rating_change=-20
+                ))
                 await notification_service.create_notification(
                     db=db,
                     user_id=loser.id,

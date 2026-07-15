@@ -44,15 +44,34 @@ async def list_problems(
     """
     cache_key = (
         f"problem_list:{filters.difficulty}:{filters.tag}:"
-        f"{filters.search}:{filters.page}:{filters.per_page}"
+        f"{filters.search}:{filters.status}:{filters.page}:{filters.per_page}"
     )
-    if user_id is None:
+    if user_id is None and filters.status is None:
         cached = await cache_service.get(cache_key)
         if cached:
             data = json.loads(cached)
             return data["items"], data["total"]
 
     query = select(Problem).options(selectinload(Problem.tags))
+
+    # Status filter requires LEFT OUTER JOIN on UserProblemStats
+    if filters.status and user_id:
+        from sqlalchemy import and_
+        query = query.outerjoin(
+            UserProblemStats,
+            and_(
+                Problem.id == UserProblemStats.problem_id,
+                UserProblemStats.user_id == user_id,
+            ),
+        )
+        if filters.status == "solved":
+            query = query.where(UserProblemStats.solved.is_(True))
+        elif filters.status == "unsolved":
+            query = query.where(
+                (UserProblemStats.id.is_(None)) | (UserProblemStats.solved.is_(False))
+            )
+        elif filters.status == "attempted":
+            query = query.where(UserProblemStats.attempts > 0)
 
     # Apply filters
     if filters.difficulty:

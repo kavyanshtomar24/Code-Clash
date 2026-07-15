@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import Difficulty, Verdict
@@ -152,9 +152,37 @@ async def get_dashboard_analytics(
         {"date": row[0], "count": row[1]} for row in heatmap_res.all()
     ]
 
+    # 4. Daily Streak (Gaps & Islands)
+    streak_query = text("""
+        WITH distinct_dates AS (
+            SELECT DISTINCT DATE(submitted_at AT TIME ZONE 'UTC') AS solve_date
+            FROM submissions
+            WHERE user_id = :user_id AND verdict = 'ACCEPTED'
+        ),
+        date_groups AS (
+            SELECT solve_date, solve_date - (ROW_NUMBER() OVER (ORDER BY solve_date))::int AS grp
+            FROM distinct_dates
+        ),
+        streaks AS (
+            SELECT COUNT(*) AS streak_length, MIN(solve_date) AS start_date, MAX(solve_date) AS end_date
+            FROM date_groups
+            GROUP BY grp
+        )
+        SELECT 
+            COALESCE(MAX(streak_length), 0) AS longest_streak,
+            COALESCE((SELECT streak_length FROM streaks WHERE end_date >= CURRENT_DATE - 1 LIMIT 1), 0) AS current_streak
+        FROM streaks;
+    """)
+    streak_res = await db.execute(streak_query, {"user_id": user_id})
+    row = streak_res.first()
+    longest_streak = row[0] if row else 0
+    current_streak = row[1] if row else 0
+
     return {
         "topic_performance": topic_performance,
         "submission_heatmap": heatmap_list,
         "difficulty_breakdown": difficulty_breakdown,
         "weak_areas": weak_areas,
+        "current_streak": current_streak,
+        "longest_streak": longest_streak,
     }

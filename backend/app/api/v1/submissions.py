@@ -74,6 +74,8 @@ async def get_history(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     problem_id: str | None = Query(None),
+    verdict: str | None = Query(None, description="Filter by verdict (e.g. ACCEPTED, WRONG_ANSWER)"),
+    language: str | None = Query(None, description="Filter by language (e.g. python, cpp)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -82,7 +84,7 @@ async def get_history(
 
     pid = uuid.UUID(problem_id) if problem_id else None
     submissions, total = await submission_service.get_submission_history(
-        db, current_user.id, page, per_page, problem_id=pid
+        db, current_user.id, page, per_page, problem_id=pid, verdict=verdict, language=language
     )
     return SubmissionListResponse(
         submissions=[_to_response(s) for s in submissions],

@@ -7,9 +7,12 @@ import type {
   Friend,
   FriendRequest,
   Notification,
+  PaginatedBattleHistory,
   PaginatedLeaderboard,
   PaginatedProblems,
   ProblemDetail,
+  ProblemStatistics,
+  RatingHistoryRecord,
   RunResult,
   Submission,
   SubmissionList,
@@ -101,25 +104,31 @@ export const endpoints = {
     me: () => api.get<User>('/auth/me').then((r) => r.data),
   },
   users: {
-    stats: () => api.get<UserStats>('/users/stats').then((r) => r.data),
-    publicStats: (username: string) => api.get<UserStats>(`/users/stats/${username}`).then((r) => r.data),
     profile: (username: string) => api.get<User>(`/users/profile/${username}`).then((r) => r.data),
     update: (payload: Partial<Pick<User, 'bio' | 'profile_picture' | 'codeforces_handle'>>) =>
       api.put<User>('/users/profile', payload).then((r) => r.data),
-    search: (q: string) => api.get<Array<Pick<User, 'id' | 'username' | 'profile_picture' | 'rating'>>>('/users/search', { params: { q } }).then((r) => r.data),
+    stats: () => api.get<UserStats>('/users/stats').then((r) => r.data),
+    publicStats: (username: string) => api.get<UserStats>(`/users/stats/${username}`).then((r) => r.data),
+    search: (q: string) => api.get<User[]>(`/users/search?q=${q}`).then((r) => r.data),
+    ratingHistory: () => api.get<RatingHistoryRecord[]>('/users/rating-history').then((r) => r.data),
+    ratingHistoryByUsername: (username: string) => api.get<RatingHistoryRecord[]>(`/users/rating-history/${username}`).then((r) => r.data),
+    battleHistory: (params?: { page?: number; per_page?: number }) =>
+      api.get<PaginatedBattleHistory>('/users/battle-history', { params }).then((r) => r.data),
   },
   problems: {
-    list: (params: { difficulty?: string; tag?: string; search?: string; page?: number; per_page?: number }) =>
+    list: (params?: { difficulty?: string; tag?: string; search?: string; status?: string; page?: number; per_page?: number }) =>
       api.get<PaginatedProblems>('/problems/', { params }).then((r) => r.data),
     tags: () => api.get<Tag[]>('/problems/tags').then((r) => r.data),
     detail: (slug: string) => api.get<ProblemDetail>(`/problems/${slug}`).then((r) => r.data),
+    create: (data: unknown) => api.post<ProblemDetail>('/problems/', data).then((r) => r.data),
+    statistics: (slug: string) => api.get<ProblemStatistics>(`/problems/${slug}/statistics`).then((r) => r.data),
   },
   submissions: {
     run: (payload: { problem_id: string; language: string; code: string; input?: string }) =>
       api.post<RunResult>('/submissions/run', payload).then((r) => r.data),
     submit: (payload: { problem_id: string; language: string; code: string }) =>
       api.post<Submission>('/submissions/', payload).then((r) => r.data),
-    history: (params?: { page?: number; per_page?: number; problem_id?: string }) =>
+    history: (params?: { page?: number; per_page?: number; problem_id?: string; verdict?: string; language?: string }) =>
       api.get<SubmissionList>('/submissions/history', { params }).then((r) => r.data),
     byProblem: (problemId: string) => api.get<Submission[]>(`/submissions/problem/${problemId}`).then((r) => r.data),
   },

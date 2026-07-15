@@ -39,6 +39,8 @@ class Submission(Base, UUIDMixin):
     __tablename__ = "submissions"
     __table_args__ = (
         Index("ix_submissions_user_problem", "user_id", "problem_id"),
+        Index("ix_submissions_user_submitted_at", "user_id", "submitted_at"),
+        Index("ix_submissions_problem_verdict", "problem_id", "verdict"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(

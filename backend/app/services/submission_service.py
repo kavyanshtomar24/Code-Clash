@@ -86,11 +86,17 @@ async def get_submission_history(
     page: int = 1,
     per_page: int = 20,
     problem_id: uuid.UUID | None = None,
+    verdict: str | None = None,
+    language: str | None = None,
 ) -> tuple[list[Submission], int]:
     """Return paginated submission history for a user, newest first."""
     base = select(Submission).where(Submission.user_id == user_id)
     if problem_id:
         base = base.where(Submission.problem_id == problem_id)
+    if verdict:
+        base = base.where(Submission.verdict == verdict)
+    if language:
+        base = base.where(Submission.language == language)
 
     count_stmt = select(func.count()).select_from(base.subquery())
     count_result = await db.execute(count_stmt)

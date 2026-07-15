@@ -32,6 +32,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Line,
+  LineChart,
   PolarAngleAxis,
   PolarGrid,
   Radar as RadarShape,
@@ -256,7 +258,7 @@ function AuthPage({ mode }: { mode: 'login' | 'register' }) {
 function DashboardPage() {
   const stats = useQuery({ queryKey: ['users', 'stats'], queryFn: endpoints.users.stats })
   const analytics = useQuery({ queryKey: ['analytics'], queryFn: endpoints.analytics.dashboard })
-  const problems = useQuery({ queryKey: ['problems', 'dashboard'], queryFn: () => endpoints.problems.list({ per_page: 5 }) })
+  const problems = useQuery({ queryKey: ['problems', 'problems-dashboard'], queryFn: () => endpoints.problems.list({ per_page: 5 }) })
   const submissions = useQuery({ queryKey: ['submissions', 'history', 1], queryFn: () => endpoints.submissions.history({ per_page: 6 }) })
 
   return (
@@ -266,7 +268,11 @@ function DashboardPage() {
           ['Solved', stats.data?.total_solved ?? 0, <Check size={20} />],
           ['Submissions', stats.data?.total_submissions ?? 0, <Activity size={20} />],
           ['Accuracy', `${Math.round(stats.data?.accuracy ?? 0)}%`, <Gauge size={20} />],
-          ['Hard clears', stats.data?.hard_solved ?? 0, <Flame size={20} />],
+          [
+            'Active Streak',
+            `${analytics.data?.current_streak ?? 0} days (Max: ${analytics.data?.longest_streak ?? 0})`,
+            <Flame size={20} style={{ color: (analytics.data?.current_streak ?? 0) > 0 ? '#f3c27b' : '#999' }} />,
+          ],
         ]}
       />
       <div className="content-grid">
@@ -304,6 +310,7 @@ function ProblemsPage() {
     search: params.get('search') || undefined,
     difficulty: params.get('difficulty') || undefined,
     tag: params.get('tag') || undefined,
+    status: params.get('status') || undefined,
     page: Number(params.get('page') || 1),
     per_page: 20,
   }
@@ -332,6 +339,12 @@ function ProblemsPage() {
           <option value="">All tags</option>
           {tags.data?.map((tag) => <option key={tag.id}>{tag.name}</option>)}
         </select>
+        <select value={query.status ?? ''} onChange={(e) => update('status', e.target.value)}>
+          <option value="">All statuses</option>
+          <option value="solved">Solved</option>
+          <option value="unsolved">Unsolved</option>
+          <option value="attempted">Attempted</option>
+        </select>
       </div>
       <Panel title={`${problems.data?.total ?? 0} calibrated problems`} loading={problems.isLoading}>
         <ProblemTable problems={problems.data?.items ?? []} />
@@ -343,12 +356,75 @@ function ProblemsPage() {
 function ProblemDetailPage() {
   const { slug = '' } = useParams()
   const problem = useQuery({ queryKey: ['problem', slug], queryFn: () => endpoints.problems.detail(slug), enabled: Boolean(slug) })
+  const stats = useQuery({ queryKey: ['problem-stats', slug], queryFn: () => endpoints.problems.statistics(slug), enabled: Boolean(slug) })
 
   return (
     <Page title={problem.data?.title ?? 'Problem Detail'} action={problem.data && <Link className="primary-button" to={`/problems/${problem.data.slug}/ide`}>Open IDE</Link>}>
-      <Panel title="Specification" loading={problem.isLoading}>
-        {problem.data && <ProblemSpec problem={problem.data} />}
-      </Panel>
+      <div className="content-grid" style={{ gridTemplateColumns: '2fr 1fr' }}>
+        <Panel title="Specification" loading={problem.isLoading}>
+          {problem.data && <ProblemSpec problem={problem.data} />}
+        </Panel>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <Panel title="Solve metrics" loading={stats.isLoading}>
+            {stats.data ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <MetricGrid
+                  items={[
+                    ['Solved rate', `${stats.data.solve_rate}%`, <Gauge size={16} />],
+                    ['Solvers', stats.data.unique_solvers, <Users size={16} />],
+                  ]}
+                />
+                <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#aaa', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Total Submissions</span>
+                    <strong>{stats.data.total_submissions}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Accepted</span>
+                    <strong style={{ color: '#68d391' }}>{stats.data.accepted}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Wrong Answer</span>
+                    <strong style={{ color: '#fc8181' }}>{stats.data.wrong_answer}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Time Limit Exceeded</span>
+                    <strong style={{ color: '#f6ad55' }}>{stats.data.tle}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Runtime Error</span>
+                    <strong style={{ color: '#fc8181' }}>{stats.data.runtime_error}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Compile Error</span>
+                    <strong style={{ color: '#cbd5e0' }}>{stats.data.compile_error}</strong>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <EmptyState text="No statistics available." />
+            )}
+          </Panel>
+
+          {stats.data && stats.data.language_breakdown.length > 0 && (
+            <Panel title="Language split">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {stats.data.language_breakdown.map((lang) => (
+                  <div key={lang.language} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ textTransform: 'capitalize' }}>{lang.language}</span>
+                      <span>{lang.count} ({lang.percentage}%)</span>
+                    </div>
+                    <div style={{ height: '6px', background: '#252525', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${lang.percentage}%`, background: '#f3c27b', borderRadius: '3px' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
+        </div>
+      </div>
     </Page>
   )
 }
@@ -670,8 +746,107 @@ function BattleRoomPage() {
 }
 
 function SubmissionsPage() {
-  const submissions = useQuery({ queryKey: ['submissions', 'history'], queryFn: () => endpoints.submissions.history({ per_page: 50 }) })
-  return <Page title="Submission Log"><Panel title="Judge history" loading={submissions.isLoading}><SubmissionTable submissions={submissions.data?.submissions ?? []} /></Panel></Page>
+  const [params, setParams] = useSearchParams()
+  const page = Number(params.get('page') || 1)
+  const verdict = params.get('verdict') || undefined
+  const language = params.get('language') || undefined
+
+  const submissions = useQuery({
+    queryKey: ['submissions', 'history', { page, verdict, language }],
+    queryFn: () => endpoints.submissions.history({ page, per_page: 20, verdict, language }),
+  })
+
+  function update(key: string, value: string) {
+    const next = new URLSearchParams(params)
+    if (value) next.set(key, value)
+    else next.delete(key)
+    next.set('page', '1')
+    setParams(next)
+  }
+
+  const data = submissions.data
+  const list = data?.submissions ?? []
+  const totalPages = data?.total_pages ?? 1
+
+  return (
+    <Page title="Submission Log">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="filters">
+          <select value={verdict ?? ''} onChange={(e) => update('verdict', e.target.value)}>
+            <option value="">All verdicts</option>
+            <option value="ACCEPTED">Accepted</option>
+            <option value="WRONG_ANSWER">Wrong Answer</option>
+            <option value="TIME_LIMIT_EXCEEDED">Time Limit Exceeded</option>
+            <option value="RUNTIME_ERROR">Runtime Error</option>
+            <option value="COMPILE_ERROR">Compile Error</option>
+          </select>
+          <select value={language ?? ''} onChange={(e) => update('language', e.target.value)}>
+            <option value="">All languages</option>
+            <option value="python">Python</option>
+            <option value="cpp">C++</option>
+            <option value="java">Java</option>
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+          </select>
+        </div>
+
+        <Panel title="Judge history" loading={submissions.isLoading}>
+          <SubmissionTable submissions={list} />
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+              <button
+                className="ghost-button"
+                disabled={page <= 1}
+                onClick={() => {
+                  const next = new URLSearchParams(params)
+                  next.set('page', String(page - 1))
+                  setParams(next)
+                }}
+                type="button"
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                if (totalPages > 7 && Math.abs(p - page) > 2 && p !== 1 && p !== totalPages) {
+                  if (p === 2 || p === totalPages - 1) {
+                    return <span key={p} style={{ alignSelf: 'center', color: '#555' }}>...</span>
+                  }
+                  return null
+                }
+                return (
+                  <button
+                    key={p}
+                    className={p === page ? 'primary-button' : 'ghost-button'}
+                    style={{ minWidth: '40px', padding: '0.5rem' }}
+                    onClick={() => {
+                      const next = new URLSearchParams(params)
+                      next.set('page', String(p))
+                      setParams(next)
+                    }}
+                    type="button"
+                  >
+                    {p}
+                  </button>
+                )
+              })}
+              <button
+                className="ghost-button"
+                disabled={page >= totalPages}
+                onClick={() => {
+                  const next = new URLSearchParams(params)
+                  next.set('page', String(page + 1))
+                  setParams(next)
+                }}
+                type="button"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </Panel>
+      </div>
+    </Page>
+  )
 }
 
 function NotificationsPage() {
@@ -953,9 +1128,29 @@ function ProfilePage() {
   const { username } = useParams()
   const { user } = useAuth()
   const viewed = username ?? user?.username ?? ''
+  
   const profile = useQuery({ queryKey: ['profile', viewed], queryFn: () => endpoints.users.profile(viewed), enabled: Boolean(viewed) && viewed !== user?.username })
   const stats = useQuery({ queryKey: ['stats', viewed], queryFn: () => viewed === user?.username ? endpoints.users.stats() : endpoints.users.publicStats(viewed), enabled: Boolean(viewed) })
   const cf = useQuery({ queryKey: ['codeforces'], queryFn: endpoints.codeforces.profile, enabled: viewed === user?.username, retry: false })
+  const ratingHistory = useQuery({
+    queryKey: ['ratingHistory', viewed],
+    queryFn: () => viewed === user?.username ? endpoints.users.ratingHistory() : endpoints.users.ratingHistoryByUsername(viewed),
+    enabled: Boolean(viewed),
+  })
+  
+  // Only display battles/contests for own profile or where API permits
+  const battleHistory = useQuery({
+    queryKey: ['battleHistory', viewed],
+    queryFn: () => endpoints.users.battleHistory({ per_page: 10 }),
+    enabled: viewed === user?.username,
+  })
+  const cfContests = useQuery({
+    queryKey: ['cfContests', viewed],
+    queryFn: endpoints.codeforces.contests,
+    enabled: viewed === user?.username && Boolean(user?.codeforces_handle),
+    retry: false,
+  })
+
   const display = viewed === user?.username ? user : profile.data
   const codeforcesHandle = display?.codeforces_handle || cf.data?.handle
   const codeforcesRating = cf.data?.rating ?? display?.rating ?? 0
@@ -964,30 +1159,162 @@ function ProfilePage() {
   return (
     <Page title={display?.username ?? 'Profile'} action={viewed === user?.username && <Link className="ghost-button" to="/settings">Edit profile</Link>}>
       <MetricGrid variant="three" items={[['Solved', stats.data?.total_solved ?? 0, <Check size={20} />], ['Accuracy', `${Math.round(stats.data?.accuracy ?? 0)}%`, <Activity size={20} />], ['Submissions', stats.data?.total_submissions ?? 0, <Braces size={20} />]]} />
-      <Panel title="Codeforces profile" loading={cf.isLoading && viewed === user?.username}>
-        {codeforcesHandle ? (
-          <div className="codeforces-grid">
-            <article className="codeforces-card">
-              <span><Code2 size={18} /> Handle</span>
-              <strong>{codeforcesHandle}</strong>
-            </article>
-            <article className="codeforces-card">
-              <span><Gauge size={18} /> Rating</span>
-              <strong>{codeforcesRating}</strong>
-            </article>
-            <article className="codeforces-card">
-              <span><Medal size={18} /> Rank</span>
-              <strong>{codeforcesRank}</strong>
-            </article>
-          </div>
-        ) : (
-          <EmptyState text="No linked Codeforces profile yet." />
-        )}
-      </Panel>
-      <Panel title="Profile dossier">
-        <p>{display?.bio || 'No bio configured yet.'}</p>
-        <p className="muted">Codeforces: {codeforcesHandle || 'Not linked'}</p>
-      </Panel>
+      
+      <div className="content-grid" style={{ gridTemplateColumns: '2fr 1fr' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <Panel title="Rating trajectory" loading={ratingHistory.isLoading}>
+            {ratingHistory.data && ratingHistory.data.length > 0 ? (
+              <ChartBox>
+                <ResponsiveContainer>
+                  <LineChart data={ratingHistory.data}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#252525" />
+                    <XAxis
+                      dataKey="recorded_at"
+                      tickFormatter={(str) => new Date(str).toLocaleDateString()}
+                      tick={{ fill: '#999', fontSize: 10 }}
+                    />
+                    <YAxis tick={{ fill: '#999', fontSize: 10 }} domain={['dataMin - 50', 'dataMax + 50']} />
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      labelFormatter={(str) => new Date(str).toLocaleString()}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="rating"
+                      stroke="#f3c27b"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: '#161925', stroke: '#f3c27b', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartBox>
+            ) : (
+              <EmptyState text="No battle rating changes recorded yet." />
+            )}
+          </Panel>
+
+          {viewed === user?.username && (
+            <Panel title="Battle chronicle" loading={battleHistory.isLoading}>
+              {battleHistory.data && battleHistory.data.battles.length > 0 ? (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Outcome</th>
+                        <th>Opponent</th>
+                        <th>Problem</th>
+                        <th>Rating delta</th>
+                        <th>Ended</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {battleHistory.data.battles.map((b) => (
+                        <tr key={b.battle_id}>
+                          <td>
+                            <span
+                              className="badge"
+                              style={{
+                                background:
+                                  b.outcome === 'won'
+                                    ? 'rgba(104, 211, 145, 0.1)'
+                                    : b.outcome === 'lost'
+                                    ? 'rgba(252, 129, 129, 0.1)'
+                                    : 'rgba(255, 255, 255, 0.05)',
+                                color:
+                                  b.outcome === 'won'
+                                    ? '#68d391'
+                                    : b.outcome === 'lost'
+                                    ? '#fc8181'
+                                    : '#aaa',
+                              }}
+                            >
+                              {b.outcome.toUpperCase()}
+                            </span>
+                          </td>
+                          <td>{b.opponent_username}</td>
+                          <td>
+                            <Link to={`/problems/${b.problem_slug}`}>{b.problem_title}</Link>
+                          </td>
+                          <td>
+                            <strong style={{ color: b.rating_change >= 0 ? '#68d391' : '#fc8181' }}>
+                              {b.rating_change >= 0 ? `+${b.rating_change}` : b.rating_change}
+                            </strong>
+                          </td>
+                          <td>{b.ended_at ? new Date(b.ended_at).toLocaleDateString() : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <EmptyState text="No competitive battle participations logged." />
+              )}
+            </Panel>
+          )}
+
+          {viewed === user?.username && user?.codeforces_handle && (
+            <Panel title="Codeforces Contest Performance" loading={cfContests.isLoading}>
+              {cfContests.data && cfContests.data.length > 0 ? (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Contest</th>
+                        <th>Rank</th>
+                        <th>Rating Change</th>
+                        <th>New Rating</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cfContests.data.map((c) => (
+                        <tr key={c.contest_id}>
+                          <td>{c.contest_name}</td>
+                          <td>#{c.rank}</td>
+                          <td>
+                            <strong style={{ color: c.rating_change >= 0 ? '#68d391' : '#fc8181' }}>
+                              {c.rating_change >= 0 ? `+${c.rating_change}` : c.rating_change}
+                            </strong>
+                          </td>
+                          <td>{c.new_rating}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <EmptyState text="No Codeforces contests synchronised." />
+              )}
+            </Panel>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <Panel title="Codeforces profile" loading={cf.isLoading && viewed === user?.username}>
+            {codeforcesHandle ? (
+              <div className="codeforces-grid" style={{ display: 'grid', gap: '1rem' }}>
+                <article className="codeforces-card">
+                  <span><Code2 size={18} /> Handle</span>
+                  <strong>{codeforcesHandle}</strong>
+                </article>
+                <article className="codeforces-card">
+                  <span><Gauge size={18} /> Rating</span>
+                  <strong>{codeforcesRating}</strong>
+                </article>
+                <article className="codeforces-card">
+                  <span><Medal size={18} /> Rank</span>
+                  <strong>{codeforcesRank}</strong>
+                </article>
+              </div>
+            ) : (
+              <EmptyState text="No linked Codeforces profile yet." />
+            )}
+          </Panel>
+          <Panel title="Profile dossier">
+            <p>{display?.bio || 'No bio configured yet.'}</p>
+            <p className="muted">Codeforces: {codeforcesHandle || 'Not linked'}</p>
+          </Panel>
+        </div>
+      </div>
     </Page>
   )
 }

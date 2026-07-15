@@ -10,6 +10,7 @@ from app.models.friend import FriendRequest, Friendship  # noqa: F401
 from app.models.battle import Battle, BattleSubmission  # noqa: F401
 from app.models.notification import Notification  # noqa: F401
 from app.models.codeforces import CodeforcesProfile, CodeforcesContest  # noqa: F401
+from app.models.rating_history import RatingHistory  # noqa: F401
 
 __all__ = [
     "User",
@@ -26,4 +27,5 @@ __all__ = [
     "Notification",
     "CodeforcesProfile",
     "CodeforcesContest",
+    "RatingHistory",
 ]

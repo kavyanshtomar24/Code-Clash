@@ -86,3 +86,44 @@ async def search_users(
 ):
     """Case-insensitive username search returning lightweight results."""
     return await user_service.search_users(db, q)
+
+
+@router.get(
+    "/rating-history",
+    summary="Own rating history",
+)
+async def get_own_rating_history(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return chronological rating changes for the authenticated user."""
+    from app.services.rating_history_service import get_rating_history
+    return await get_rating_history(db, current_user.id)
+
+
+@router.get(
+    "/rating-history/{username}",
+    summary="Public rating history",
+)
+async def get_user_rating_history(
+    username: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return chronological rating changes for any user by username."""
+    from app.services.rating_history_service import get_rating_history_by_username
+    return await get_rating_history_by_username(db, username)
+
+
+@router.get(
+    "/battle-history",
+    summary="Own battle history",
+)
+async def get_own_battle_history(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return paginated battle history for the authenticated user."""
+    from app.services.battle_history_service import get_battle_history
+    return await get_battle_history(db, current_user.id, page, per_page)

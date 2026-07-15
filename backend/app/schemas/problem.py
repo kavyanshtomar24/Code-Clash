@@ -91,5 +91,6 @@ class ProblemFilterParams(BaseModel):
     difficulty: str | None = None
     tag: str | None = None
     search: str | None = None
+    status: str | None = None  # solved | unsolved | attempted
     page: int = Field(default=1, ge=1)
     per_page: int = Field(default=20, ge=1, le=100)

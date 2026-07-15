@@ -6,7 +6,6 @@ import type {
   DashboardAnalytics,
   Friend,
   FriendRequest,
-  LeaderboardRow,
   Notification,
   PaginatedLeaderboard,
   PaginatedProblems,

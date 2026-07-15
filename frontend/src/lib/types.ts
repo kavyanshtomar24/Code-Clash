@@ -201,5 +201,14 @@ export type LeaderboardRow = {
   username: string
   rating: number
   profile_picture?: string | null
-  total_solved?: number
+  codeforces_handle?: string | null
+  total_solved: number
+}
+
+export type PaginatedLeaderboard = {
+  users: LeaderboardRow[]
+  total_users: number
+  page: number
+  per_page: number
+  total_pages: number
 }

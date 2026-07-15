@@ -8,6 +8,7 @@ import type {
   FriendRequest,
   LeaderboardRow,
   Notification,
+  PaginatedLeaderboard,
   PaginatedProblems,
   ProblemDetail,
   RunResult,
@@ -160,6 +161,7 @@ export const endpoints = {
     unlink: () => api.delete('/codeforces/unlink').then((r) => r.data),
   },
   leaderboard: {
-    list: (limit = 100) => api.get<LeaderboardRow[]>('/leaderboard/', { params: { limit } }).then((r) => r.data),
+    list: (params?: { page?: number; per_page?: number; search?: string; sort_by?: string }) =>
+      api.get<PaginatedLeaderboard>('/leaderboard/', { params }).then((r) => r.data),
   },
 }

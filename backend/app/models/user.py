@@ -36,7 +36,7 @@ class User(Base, UUIDMixin):
     bio: Mapped[str | None] = mapped_column(String(500), nullable=True)
     profile_picture: Mapped[str | None] = mapped_column(String(500), nullable=True)
     codeforces_handle: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    rating: Mapped[int] = mapped_column(default=DEFAULT_RATING)
+    rating: Mapped[int] = mapped_column(default=DEFAULT_RATING, index=True)
     is_admin: Mapped[bool] = mapped_column(default=False)
     is_active: Mapped[bool] = mapped_column(default=True)
 

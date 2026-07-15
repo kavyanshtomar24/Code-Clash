@@ -21,6 +21,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -83,6 +84,11 @@ class UserProblemStats(Base, UUIDMixin):
     __tablename__ = "user_problem_stats"
     __table_args__ = (
         UniqueConstraint("user_id", "problem_id", name="uq_user_problem"),
+        Index(
+            "ix_user_problem_stats_solved_partial",
+            "user_id",
+            postgresql_where=text("solved = TRUE")
+        ),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(

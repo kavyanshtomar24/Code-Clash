@@ -23,7 +23,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import { Component, useState } from 'react'
+import { Component, useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -750,17 +750,201 @@ function NotificationsPage() {
 }
 
 function LeaderboardPage() {
-  const leaderboard = useQuery({ queryKey: ['leaderboard'], queryFn: () => endpoints.leaderboard.list(100) })
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const page = parseInt(searchParams.get('page') || '1', 10)
+  const sortBy = searchParams.get('sort_by') || 'rating'
+  const search = searchParams.get('search') || ''
+
+  const [searchInput, setSearchInput] = useState(search)
+
+  // Sync search input with search param debounced
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (searchInput.trim()) {
+          next.set('search', searchInput.trim())
+        } else {
+          next.delete('search')
+        }
+        next.set('page', '1')
+        return next
+      })
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [searchInput, setSearchParams])
+
+  const leaderboard = useQuery({
+    queryKey: ['leaderboard', { page, sortBy, search }],
+    queryFn: () => endpoints.leaderboard.list({ page, per_page: 20, search, sort_by: sortBy }),
+  })
+
+  const handlePageChange = (newPage: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('page', newPage.toString())
+      return next
+    })
+  }
+
+  const handleSortChange = (field: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('sort_by', field)
+      next.set('page', '1')
+      return next
+    })
+  }
+
+  const data = leaderboard.data
+  const users = data?.users ?? []
+  const totalPages = data?.total_pages ?? 1
+  const totalUsers = data?.total_users ?? 0
+  const startRow = (page - 1) * 20 + 1
+  const endRow = Math.min(page * 20, totalUsers)
+
   return (
     <Page title="Leaderboard">
-      <Panel title="Global rating table" loading={leaderboard.isLoading}>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Rank</th><th>User</th><th>Rating</th><th>Solved</th></tr></thead>
-            <tbody>{(leaderboard.data ?? []).map((user, index) => <tr key={user.user_id}><td>#{user.rank ?? index + 1}</td><td><Link to={`/profile/${user.username}`}>{user.username}</Link></td><td>{user.rating}</td><td>{user.total_solved ?? '-'}</td></tr>)}</tbody>
-          </table>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {/* Controls Panel */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="field" style={{ margin: 0, width: '100%', maxWidth: '350px', position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#888', display: 'flex', alignItems: 'center' }}>
+              <Search size={16} />
+            </span>
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              style={{ paddingLeft: '2.5rem', margin: 0 }}
+            />
+          </div>
+          <div style={{ color: '#888', fontSize: '0.9rem' }}>
+            {totalUsers > 0 ? `Showing ${startRow}–${endRow} of ${totalUsers} users` : 'No users found'}
+          </div>
         </div>
-      </Panel>
+
+        <Panel title="Global Rankings" loading={leaderboard.isLoading}>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: '80px' }}>Rank</th>
+                  <th>User</th>
+                  <th
+                    onClick={() => handleSortChange('rating')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Rating {sortBy === 'rating' ? '▼' : '⇅'}
+                  </th>
+                  <th
+                    onClick={() => handleSortChange('solved')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Solved {sortBy === 'solved' ? '▼' : '⇅'}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((row) => (
+                  <tr key={row.user_id}>
+                    <td>
+                      <strong style={{ color: row.rank <= 3 ? '#f3c27b' : '#aaa' }}>
+                        #{row.rank}
+                      </strong>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        {row.profile_picture ? (
+                          <img
+                            src={row.profile_picture}
+                            alt={row.username}
+                            style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }}
+                          />
+                        ) : (
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #3a3f58, #23273a)', color: '#f3c27b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.85rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            {row.username.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                          <Link to={`/profile/${row.username}`} style={{ fontWeight: 600 }}>
+                            {row.username}
+                          </Link>
+                          {row.codeforces_handle && (
+                            <span style={{ fontSize: '0.75rem', color: '#68d391' }}>
+                              cf: {row.codeforces_handle}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="badge" style={{ background: 'rgba(243, 194, 123, 0.1)', color: '#f3c27b', border: '1px solid rgba(243, 194, 123, 0.2)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>
+                        {row.rating}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#aaa', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+                        {row.total_solved} solved
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {!leaderboard.isLoading && users.length === 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', padding: '3rem 0', color: '#888' }}>
+                      No matching records found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+              <button
+                className="ghost-button"
+                disabled={page <= 1}
+                onClick={() => handlePageChange(page - 1)}
+                type="button"
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                if (totalPages > 7 && Math.abs(p - page) > 2 && p !== 1 && p !== totalPages) {
+                  if (p === 2 || p === totalPages - 1) {
+                    return <span key={p} style={{ alignSelf: 'center', color: '#555' }}>...</span>
+                  }
+                  return null
+                }
+                return (
+                  <button
+                    key={p}
+                    className={p === page ? 'primary-button' : 'ghost-button'}
+                    style={{ minWidth: '40px', padding: '0.5rem' }}
+                    onClick={() => handlePageChange(p)}
+                    type="button"
+                  >
+                    {p}
+                  </button>
+                )
+              })}
+              <button
+                className="ghost-button"
+                disabled={page >= totalPages}
+                onClick={() => handlePageChange(page + 1)}
+                type="button"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </Panel>
+      </div>
     </Page>
   )
 }

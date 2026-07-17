@@ -1056,12 +1056,12 @@ function LeaderboardPage() {
                       </div>
                     </td>
                     <td>
-                      <span className="badge" style={{ background: 'rgba(243, 194, 123, 0.1)', color: '#f3c27b', border: '1px solid rgba(243, 194, 123, 0.2)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>
+                      <span style={{ display: 'inline-block', background: 'rgba(243, 194, 123, 0.1)', color: '#f3c27b', border: '1px solid rgba(243, 194, 123, 0.2)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>
                         {row.rating}
                       </span>
                     </td>
                     <td>
-                      <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#aaa', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+                      <span style={{ display: 'inline-block', background: 'rgba(255,255,255,0.05)', color: '#aaa', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
                         {row.total_solved} solved
                       </span>
                     </td>

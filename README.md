@@ -285,7 +285,7 @@ Some possible improvements for Code Clash include:
 
 **Kavyansh Tomar**
 
-B.Tech Mechanical Engineering — Delhi Technological University
+B.Tech — Delhi Technological University
 
 - GitHub: https://github.com/kavyanshtomar24
 - Code Clash Repository: https://github.com/kavyanshtomar24/Code-Clash
